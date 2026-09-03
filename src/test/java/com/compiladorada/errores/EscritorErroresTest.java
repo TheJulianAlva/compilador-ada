@@ -46,8 +46,12 @@ class EscritorErroresTest {
         EscritorErrores.volcar(limpio, dir, "p.ada");
 
         String lex = Files.readString(dir.resolve("errores_lexicos.txt"));
-        assertFalse(lex.contains("1:1"));
-        assertTrue(lex.contains("0 errores") || lex.contains("Sin errores"));
+        // el error previo (línea 'p.ada:1:1: error léxico: x') debe haberse sobrescrito;
+        // se comprueba la línea formateada, no el fragmento '1:1' que la cabecera ISO
+        // de fecha/hora puede contener por casualidad.
+        assertFalse(lex.contains("p.ada:1:1:"), "el error previo debe haberse sobrescrito");
+        assertFalse(lex.contains("error léxico:"), "no debe quedar ningún error");
+        assertTrue(lex.contains("Total: 0 errores") || lex.contains("Sin errores"));
     }
 
     @Test
