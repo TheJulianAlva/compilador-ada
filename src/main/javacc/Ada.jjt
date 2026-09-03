@@ -1,0 +1,155 @@
+options {
+    JDK_VERSION = "17";
+    STATIC = false;
+    IGNORE_CASE = true;
+    MULTI = true;
+    VISITOR = true;
+    NODE_DEFAULT_VOID = true;
+    TRACK_TOKENS = true;
+}
+
+PARSER_BEGIN(AdaParser)
+package com.compiladorada.generado;
+
+public class AdaParser {
+}
+PARSER_END(AdaParser)
+
+/* ===== Descartables ===== */
+SKIP : { " " | "\t" | "\r" | "\n" }
+
+/* Comentario de línea: disponible para el recorrido léxico, ignorado por el parser */
+SPECIAL_TOKEN : { <COMENTARIO: "--" (~["\n","\r"])*> }
+
+/* ===== Palabras reservadas (subconjunto usado por la gramática) ===== */
+TOKEN :
+{
+    <KW_PROCEDURE: "procedure">
+  | <KW_FUNCTION:  "function">
+  | <KW_PACKAGE:   "package">
+  | <KW_BODY:      "body">
+  | <KW_IS:        "is">
+  | <KW_BEGIN:     "begin">
+  | <KW_END:       "end">
+  | <KW_RETURN:    "return">
+  | <KW_CONSTANT:  "constant">
+  | <KW_TYPE:      "type">
+  | <KW_SUBTYPE:   "subtype">
+  | <KW_RANGE:     "range">
+  | <KW_RECORD:    "record">
+  | <KW_ARRAY:     "array">
+  | <KW_OF:        "of">
+  | <KW_IN:        "in">
+  | <KW_OUT:       "out">
+  | <KW_IF:        "if">
+  | <KW_THEN:      "then">
+  | <KW_ELSIF:     "elsif">
+  | <KW_ELSE:      "else">
+  | <KW_LOOP:      "loop">
+  | <KW_FOR:       "for">
+  | <KW_WHILE:     "while">
+  | <KW_REVERSE:   "reverse">
+  | <KW_DECLARE:   "declare">
+  | <KW_EXCEPTION: "exception">
+  | <KW_WHEN:      "when">
+  | <KW_RAISE:     "raise">
+  | <KW_OTHERS:    "others">
+  | <KW_PRIVATE:   "private">
+  | <KW_NULL:      "null">
+  | <KW_AND:       "and">
+  | <KW_OR:        "or">
+  | <KW_XOR:       "xor">
+  | <KW_NOT:       "not">
+  | <KW_ABS:       "abs">
+  | <KW_MOD:       "mod">
+  | <KW_REM:       "rem">
+}
+
+/* ===== Delimitadores compuestos (antes que los simples) ===== */
+TOKEN :
+{
+    <ASIGNA:   ":=">
+  | <FLECHA:   "=>">
+  | <PUNTOPUNTO: "..">
+  | <POT:      "**">
+  | <NEQ:      "/=">
+  | <GEQ:      ">=">
+  | <LEQ:      "<=">
+  | <ETIQIZQ:  "<<">
+  | <ETIQDER:  ">>">
+  | <CAJA:     "<>">
+  | <BARRA:    "|">
+}
+
+/* ===== Delimitadores simples ===== */
+TOKEN :
+{
+    <LPAREN: "(">
+  | <RPAREN: ")">
+  | <COMA:   ",">
+  | <PUNTO:  ".">
+  | <DOSP:   ":">
+  | <PYC:    ";">
+  | <IGUAL:  "=">
+  | <MENOR:  "<">
+  | <MAYOR:  ">">
+  | <MAS:    "+">
+  | <MENOS:  "-">
+  | <POR:    "*">
+  | <DIV:    "/">
+  | <AMP:    "&">
+  | <APOS:   "'">
+}
+
+/* ===== Literales ===== */
+TOKEN :
+{
+    <#DIGITO:    ["0"-"9"]>
+  | <#HEX:       ["0"-"9","a"-"f","A"-"F"]>
+  | <#EXP:       ["e","E"] (["+","-"])? (<DIGITO>)+>
+  | <ENTERO:     <DIGITO> ("_")? (<DIGITO>)* >
+  | <REAL:       <DIGITO> ("_")? (<DIGITO>)* "." <DIGITO> ("_")? (<DIGITO>)* (<EXP>)? >
+  | <BASADO:     (<DIGITO>)+ "#" <HEX> (("_")? <HEX>)* ("." <HEX> (("_")? <HEX>)*)? "#" (<EXP>)? >
+  | <CARACTER:   "'" (~["'","\n","\r"]) "'">
+  | <CADENA:     "\"" ( (~["\"","\n","\r"]) | "\"\"" )* "\"">
+}
+
+/* ===== Identificador ===== */
+TOKEN :
+{
+    <IDENTIFICADOR: ["a"-"z","A"-"Z"] (["a"-"z","A"-"Z","0"-"9"])*
+                    ("_" (["a"-"z","A"-"Z","0"-"9"])+)* >
+}
+
+/* ===== Catch-all léxico: cualquier carácter que nada aceptó ===== */
+TOKEN :
+{
+    <ERROR_LEXICO: ~[]>
+}
+
+/* Producción raíz mínima; se amplía en Tasks 5-8 */
+void programa() #Programa :
+{}
+{
+    ( <IDENTIFICADOR> | keyword() | literal() | delimitador() )* <EOF>
+}
+
+void keyword() : {}
+{
+    <KW_PROCEDURE> | <KW_FUNCTION> | <KW_PACKAGE> | <KW_BODY> | <KW_IS> | <KW_BEGIN>
+  | <KW_END> | <KW_RETURN> | <KW_CONSTANT> | <KW_TYPE> | <KW_SUBTYPE> | <KW_RANGE>
+  | <KW_RECORD> | <KW_ARRAY> | <KW_OF> | <KW_IN> | <KW_OUT> | <KW_IF> | <KW_THEN>
+  | <KW_ELSIF> | <KW_ELSE> | <KW_LOOP> | <KW_FOR> | <KW_WHILE> | <KW_REVERSE>
+  | <KW_DECLARE> | <KW_EXCEPTION> | <KW_WHEN> | <KW_RAISE> | <KW_OTHERS> | <KW_PRIVATE>
+  | <KW_NULL> | <KW_AND> | <KW_OR> | <KW_XOR> | <KW_NOT> | <KW_ABS> | <KW_MOD> | <KW_REM>
+}
+
+void literal() : {}
+{ <ENTERO> | <REAL> | <BASADO> | <CARACTER> | <CADENA> }
+
+void delimitador() : {}
+{
+    <ASIGNA> | <FLECHA> | <PUNTOPUNTO> | <POT> | <NEQ> | <GEQ> | <LEQ> | <ETIQIZQ>
+  | <ETIQDER> | <CAJA> | <BARRA> | <LPAREN> | <RPAREN> | <COMA> | <PUNTO> | <DOSP>
+  | <PYC> | <IGUAL> | <MENOR> | <MAYOR> | <MAS> | <MENOS> | <POR> | <DIV> | <AMP> | <APOS>
+}
