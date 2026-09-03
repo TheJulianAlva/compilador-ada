@@ -127,29 +127,89 @@ TOKEN :
     <ERROR_LEXICO: ~[]>
 }
 
-/* Producción raíz mínima; se amplía en Tasks 5-8 */
-void programa() #Programa :
-{}
+/* ===== Producciones sintácticas ===== */
+
+void programa() #Programa : {}
 {
-    ( <IDENTIFICADOR> | keyword() | literal() | delimitador() )* <EOF>
+    ( unidadCompilacion() )+ <EOF>
 }
 
-void keyword() : {}
+void unidadCompilacion() : {}
 {
-    <KW_PROCEDURE> | <KW_FUNCTION> | <KW_PACKAGE> | <KW_BODY> | <KW_IS> | <KW_BEGIN>
-  | <KW_END> | <KW_RETURN> | <KW_CONSTANT> | <KW_TYPE> | <KW_SUBTYPE> | <KW_RANGE>
-  | <KW_RECORD> | <KW_ARRAY> | <KW_OF> | <KW_IN> | <KW_OUT> | <KW_IF> | <KW_THEN>
-  | <KW_ELSIF> | <KW_ELSE> | <KW_LOOP> | <KW_FOR> | <KW_WHILE> | <KW_REVERSE>
-  | <KW_DECLARE> | <KW_EXCEPTION> | <KW_WHEN> | <KW_RAISE> | <KW_OTHERS> | <KW_PRIVATE>
-  | <KW_NULL> | <KW_AND> | <KW_OR> | <KW_XOR> | <KW_NOT> | <KW_ABS> | <KW_MOD> | <KW_REM>
+    LOOKAHEAD(2) paquete()
+  | procedimiento()
+  | funcion()
 }
 
-void literal() : {}
-{ <ENTERO> | <REAL> | <BASADO> | <CARACTER> | <CADENA> }
-
-void delimitador() : {}
+void procedimiento() #Procedimiento : {}
 {
-    <ASIGNA> | <FLECHA> | <PUNTOPUNTO> | <POT> | <NEQ> | <GEQ> | <LEQ> | <ETIQIZQ>
-  | <ETIQDER> | <CAJA> | <BARRA> | <LPAREN> | <RPAREN> | <COMA> | <PUNTO> | <DOSP>
-  | <PYC> | <IGUAL> | <MENOR> | <MAYOR> | <MAS> | <MENOS> | <POR> | <DIV> | <AMP> | <APOS>
+    <KW_PROCEDURE> <IDENTIFICADOR> ( "(" parametros() ")" )? <KW_IS>
+        ( declaracion() )*
+    <KW_BEGIN>
+        ( sentencia() )*
+    ( bloqueExcepcion() )?
+    <KW_END> ( <IDENTIFICADOR> )? ";"
+}
+
+void funcion() #Funcion : {}
+{
+    <KW_FUNCTION> <IDENTIFICADOR> ( "(" parametros() ")" )? <KW_RETURN> tipoRef() <KW_IS>
+        ( declaracion() )*
+    <KW_BEGIN>
+        ( sentencia() )*
+    ( bloqueExcepcion() )?
+    <KW_END> ( <IDENTIFICADOR> )? ";"
+}
+
+void parametros() : {}
+{
+    parametro() ( ";" parametro() )*
+}
+
+void parametro() #Parametro : {}
+{
+    <IDENTIFICADOR> ( "," <IDENTIFICADOR> )* ":"
+    ( LOOKAHEAD(2) <KW_IN> <KW_OUT> | <KW_IN> | <KW_OUT> )?
+    tipoRef()
+}
+
+/* Referencia a un tipo por nombre; la definición de tipos nuevos va en Task 8. */
+void tipoRef() : {}
+{
+    <IDENTIFICADOR>
+}
+
+void declaracion() : {}
+{
+    declaracionVar()
+}
+
+void declaracionVar() #DeclaracionVar : {}
+{
+    <IDENTIFICADOR> ( "," <IDENTIFICADOR> )* ":" ( <KW_CONSTANT> )? tipoRef()
+    ( ":=" expresion() )? ";"
+}
+
+/* ===== Stubs temporales (Tasks 6-8 los reemplazan) ===== */
+
+void sentencia() : {}
+{
+    <KW_NULL> ";"
+  | <IDENTIFICADOR> ":=" expresion() ";"
+}
+
+void expresion() : {}
+{
+    <IDENTIFICADOR> | <ENTERO> | <REAL> | <BASADO> | <CARACTER> | <CADENA>
+}
+
+void bloqueExcepcion() : {}
+{
+    <KW_EXCEPTION> <KW_WHEN> <KW_OTHERS> "=>" ( sentencia() )*
+}
+
+void paquete() : {}
+{
+    <KW_PACKAGE> ( <KW_BODY> )? <IDENTIFICADOR> <KW_IS> ( declaracion() )*
+    <KW_END> ( <IDENTIFICADOR> )? ";"
 }
