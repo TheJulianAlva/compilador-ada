@@ -15,9 +15,6 @@ public final class Main {
     }
 
     public static void main(String[] args) {
-        SwingUtilities.invokeLater(() -> {
-            // TODO: construir y mostrar la ventana principal del IDE.
-            System.out.println("Compilador Ada — IDE (pendiente de implementar)");
-        });
+        SwingUtilities.invokeLater(() -> new VentanaPrincipal().setVisible(true));
     }
 }
