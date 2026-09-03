@@ -14,6 +14,16 @@ class GramaticaTiposTest {
         new AdaParser(new StringReader(fuente)).programa();
     }
 
+    private boolean tieneErrores(String fuente) {
+        AdaParser p = new AdaParser(new StringReader(fuente));
+        try {
+            p.programa();
+        } catch (Exception ignorada) {
+            // la recuperación puede rendirse; los errores acumulados siguen valiendo
+        }
+        return !p.getErroresSintacticos().isEmpty();
+    }
+
     @Test
     void tipo_rango_y_subtipo() {
         assertDoesNotThrow(() -> parsear(
@@ -59,8 +69,8 @@ class GramaticaTiposTest {
     }
 
     @Test
-    void record_sin_end_record_lanza() {
-        assertThrows(ParseException.class, () -> parsear(
+    void record_sin_end_record_se_reporta() {
+        assertTrue(tieneErrores(
                 "procedure P is type R is record X : Integer; begin null; end;"));
     }
 }

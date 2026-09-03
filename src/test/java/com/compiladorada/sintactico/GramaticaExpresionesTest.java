@@ -15,12 +15,23 @@ class GramaticaExpresionesTest {
                 "procedure P is begin X := " + e + "; end;")).programa();
     }
 
+    private boolean exprConErrores(String e) {
+        AdaParser p = new AdaParser(new StringReader(
+                "procedure P is begin X := " + e + "; end;"));
+        try {
+            p.programa();
+        } catch (Exception ignorada) {
+            // la recuperación puede rendirse; los errores acumulados siguen valiendo
+        }
+        return !p.getErroresSintacticos().isEmpty();
+    }
+
     @Test
     void aritmetica_con_precedencia() {
         assertDoesNotThrow(() -> expr("1 + 2 * 3 - 4 / 2"));
         assertDoesNotThrow(() -> expr("(2 ** 3) ** 2"));
         // ** no es asociativo en Ada
-        assertThrows(ParseException.class, () -> expr("2 ** 3 ** 2"));
+        assertTrue(exprConErrores("2 ** 3 ** 2"));
         assertDoesNotThrow(() -> expr("A mod B rem C"));
     }
 
@@ -45,7 +56,7 @@ class GramaticaExpresionesTest {
     }
 
     @Test
-    void parentesis_desbalanceado_lanza() {
-        assertThrows(ParseException.class, () -> expr("(1 + 2"));
+    void parentesis_desbalanceado_se_reporta() {
+        assertTrue(exprConErrores("(1 + 2"));
     }
 }

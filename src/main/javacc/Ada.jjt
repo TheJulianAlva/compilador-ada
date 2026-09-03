@@ -14,6 +14,64 @@ package com.compiladorada.generado;
 import com.compiladorada.sintactico.nodos.SimpleNode;
 
 public class AdaParser {
+
+    /** Errores sintácticos acumulados durante el análisis en modo pánico. */
+    public final java.util.List<com.compiladorada.errores.ErrorCompilacion> erroresSintacticos =
+            new java.util.ArrayList<com.compiladorada.errores.ErrorCompilacion>();
+
+    public java.util.List<com.compiladorada.errores.ErrorCompilacion> getErroresSintacticos() {
+        return erroresSintacticos;
+    }
+
+    private int ultLinea = -1;
+    private int ultCol = -1;
+
+    /** Registra un error traducido, descartando "fantasmas" y con tope de 200. */
+    private void registrar(ParseException e) {
+        Token t = (e.currentToken != null && e.currentToken.next != null)
+                ? e.currentToken.next : e.currentToken;
+        int linea = t != null ? t.beginLine : 0;
+        int col = t != null ? t.beginColumn : 0;
+        if (!esFantasma(linea, col)) {
+            String msg = com.compiladorada.sintactico.TraductorMensajes.traducir(e);
+            erroresSintacticos.add(new com.compiladorada.errores.ErrorCompilacion(
+                    com.compiladorada.errores.ErrorCompilacion.Categoria.SINTACTICO, linea, col, msg));
+        }
+        if (erroresSintacticos.size() > 200) {
+            throw new RuntimeException("demasiados errores sintácticos, análisis interrumpido");
+        }
+    }
+
+    /** Un error es "fantasma" si cae casi en la misma posición que el anterior. */
+    private boolean esFantasma(int linea, int col) {
+        boolean cerca = (linea == ultLinea && Math.abs(col - ultCol) <= 2);
+        ultLinea = linea;
+        ultCol = col;
+        return cerca;
+    }
+
+    /** Consume tokens hasta uno de 'sync' (sin consumirlo) o EOF, respetando paréntesis. */
+    private void sincronizar(int... sync) {
+        int prof = 0;
+        while (true) {
+            Token sig = getToken(1);
+            if (sig == null || sig.kind == EOF) {
+                return;
+            }
+            if (sig.kind == LPAREN) {
+                prof++;
+            } else if (sig.kind == RPAREN && prof > 0) {
+                prof--;
+            } else if (prof == 0) {
+                for (int k : sync) {
+                    if (sig.kind == k) {
+                        return;
+                    }
+                }
+            }
+            getNextToken();
+        }
+    }
 }
 PARSER_END(AdaParser)
 
@@ -144,17 +202,33 @@ TOKEN :
 
 /* ===== Producciones sintácticas ===== */
 
-SimpleNode programa() #Programa : {}
+SimpleNode programa() #Programa :
+{ Token antes; }
 {
-    ( unidadCompilacion() )+ <EOF>
+    (
+        { antes = getToken(1); }
+        unidadCompilacion()
+        {
+            // Garantía de avance: si la recuperación no consumió nada, forzar un token.
+            if (getToken(1) == antes && getToken(1).kind != EOF) {
+                getNextToken();
+            }
+        }
+    )+
+    <EOF>
     { return jjtThis; }
 }
 
 void unidadCompilacion() : {}
 {
-    LOOKAHEAD(2) paquete()
-  | procedimiento()
-  | funcion()
+    try {
+        LOOKAHEAD(2) paquete()
+      | procedimiento()
+      | funcion()
+    } catch (ParseException e) {
+        registrar(e);
+        sincronizar(KW_PROCEDURE, KW_FUNCTION, KW_PACKAGE);
+    }
 }
 
 void procedimiento() #Procedimiento : {}
@@ -197,9 +271,17 @@ void tipoRef() : {}
 
 void declaracion() : {}
 {
-    <KW_TYPE> declaracionTipo()
-  | <KW_SUBTYPE> declaracionSubtipo()
-  | declaracionVar()
+    try {
+        <KW_TYPE> declaracionTipo()
+      | <KW_SUBTYPE> declaracionSubtipo()
+      | declaracionVar()
+    } catch (ParseException e) {
+        registrar(e);
+        sincronizar(PYC, KW_BEGIN, KW_END);
+        if (getToken(1).kind == PYC) {
+            getNextToken();
+        }
+    }
 }
 
 void declaracionTipo() #DeclaracionTipo : {}
@@ -235,13 +317,21 @@ void declaracionVar() #DeclaracionVar : {}
 
 void sentencia() : {}
 {
-    <KW_NULL> ";"
-  | sentenciaIf()
-  | sentenciaFor()
-  | sentenciaWhile()
-  | sentenciaRaise()
-  | LOOKAHEAD(<IDENTIFICADOR> ":=") asignacion()
-  | llamadaProc()
+    try {
+        <KW_NULL> ";"
+      | sentenciaIf()
+      | sentenciaFor()
+      | sentenciaWhile()
+      | sentenciaRaise()
+      | LOOKAHEAD(<IDENTIFICADOR> ":=") asignacion()
+      | llamadaProc()
+    } catch (ParseException e) {
+        registrar(e);
+        sincronizar(PYC, KW_END, KW_ELSIF, KW_ELSE, KW_EXCEPTION, KW_WHEN);
+        if (getToken(1).kind == PYC) {
+            getNextToken();
+        }
+    }
 }
 
 void asignacion() #Asignacion : {}

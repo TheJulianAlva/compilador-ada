@@ -14,6 +14,16 @@ class GramaticaSubprogramasTest {
         new AdaParser(new StringReader(fuente)).programa();
     }
 
+    private boolean tieneErrores(String fuente) {
+        AdaParser p = new AdaParser(new StringReader(fuente));
+        try {
+            p.programa();
+        } catch (Exception ignorada) {
+            // la recuperación puede rendirse; los errores acumulados siguen valiendo
+        }
+        return !p.getErroresSintacticos().isEmpty();
+    }
+
     @Test
     void procedimiento_minimo() {
         assertDoesNotThrow(() -> parsear("procedure Vacio is begin null; end;"));
@@ -46,8 +56,7 @@ class GramaticaSubprogramasTest {
     }
 
     @Test
-    void falta_punto_y_coma_lanza_ParseException() {
-        assertThrows(ParseException.class, () -> parsear(
-                "procedure P is begin null end;"));
+    void falta_punto_y_coma_se_reporta_como_error() {
+        assertTrue(tieneErrores("procedure P is begin null end;"));
     }
 }

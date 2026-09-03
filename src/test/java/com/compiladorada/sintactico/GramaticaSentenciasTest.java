@@ -15,6 +15,17 @@ class GramaticaSentenciasTest {
         new AdaParser(new StringReader(fuente)).programa();
     }
 
+    private boolean tieneErrores(String cuerpo) {
+        String fuente = "procedure P is begin " + cuerpo + " end;";
+        AdaParser p = new AdaParser(new StringReader(fuente));
+        try {
+            p.programa();
+        } catch (Exception ignorada) {
+            // la recuperación puede rendirse; los errores acumulados siguen valiendo
+        }
+        return !p.getErroresSintacticos().isEmpty();
+    }
+
     @Test
     void asignacion_y_llamada() {
         assertDoesNotThrow(() -> parsear("X := 1; Poner(X); Iniciar;"));
@@ -43,13 +54,12 @@ class GramaticaSentenciasTest {
     }
 
     @Test
-    void if_sin_then_lanza() {
-        assertThrows(ParseException.class, () -> parsear("if X = 1 Y := 1; end if;"));
+    void if_sin_then_se_reporta() {
+        assertTrue(tieneErrores("if X = 1 Y := 1; end if;"));
     }
 
     @Test
-    void end_loop_sin_loop_lanza() {
-        assertThrows(ParseException.class, () -> parsear(
-                "for I in 1 .. 3 Sumar(I); end loop;"));
+    void end_loop_sin_loop_se_reporta() {
+        assertTrue(tieneErrores("for I in 1 .. 3 Sumar(I); end loop;"));
     }
 }
