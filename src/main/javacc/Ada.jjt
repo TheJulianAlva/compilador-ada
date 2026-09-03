@@ -11,6 +11,8 @@ options {
 PARSER_BEGIN(AdaParser)
 package com.compiladorada.generado;
 
+import com.compiladorada.sintactico.nodos.SimpleNode;
+
 public class AdaParser {
 }
 PARSER_END(AdaParser)
@@ -129,9 +131,10 @@ TOKEN :
 
 /* ===== Producciones sintácticas ===== */
 
-void programa() #Programa : {}
+SimpleNode programa() #Programa : {}
 {
     ( unidadCompilacion() )+ <EOF>
+    { return jjtThis; }
 }
 
 void unidadCompilacion() : {}
@@ -191,12 +194,12 @@ void declaracionTipo() #DeclaracionTipo : {}
     <IDENTIFICADOR> <KW_IS> definicionTipo() ";"
 }
 
-void declaracionSubtipo() #DeclaracionTipo : {}
+void declaracionSubtipo() #DeclaracionSubtipo : {}
 {
     <IDENTIFICADOR> <KW_IS> <IDENTIFICADOR> ( <KW_RANGE> rango() )? ";"
 }
 
-void definicionTipo() : {}
+void definicionTipo() #DefinicionTipo : {}
 {
     <KW_RANGE> rango()
   | "(" <IDENTIFICADOR> ( "," <IDENTIFICADOR> )* ")"
@@ -204,7 +207,7 @@ void definicionTipo() : {}
   | <KW_ARRAY> "(" rango() ")" <KW_OF> tipoRef()
 }
 
-void componenteRegistro() : {}
+void componenteRegistro() #ComponenteRegistro : {}
 {
     <IDENTIFICADOR> ( "," <IDENTIFICADOR> )* ":" tipoRef() ( ":=" expresion() )? ";"
 }
