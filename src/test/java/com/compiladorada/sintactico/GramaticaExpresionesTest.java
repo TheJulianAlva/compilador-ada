@@ -1,7 +1,6 @@
 package com.compiladorada.sintactico;
 
 import com.compiladorada.generado.AdaParser;
-import com.compiladorada.generado.ParseException;
 import org.junit.jupiter.api.Test;
 
 import java.io.StringReader;
@@ -9,11 +8,6 @@ import java.io.StringReader;
 import static org.junit.jupiter.api.Assertions.*;
 
 class GramaticaExpresionesTest {
-
-    private void expr(String e) throws ParseException {
-        new AdaParser(new StringReader(
-                "procedure P is begin X := " + e + "; end;")).programa();
-    }
 
     private boolean exprConErrores(String e) {
         AdaParser p = new AdaParser(new StringReader(
@@ -28,31 +22,31 @@ class GramaticaExpresionesTest {
 
     @Test
     void aritmetica_con_precedencia() {
-        assertDoesNotThrow(() -> expr("1 + 2 * 3 - 4 / 2"));
-        assertDoesNotThrow(() -> expr("(2 ** 3) ** 2"));
+        assertFalse(exprConErrores("1 + 2 * 3 - 4 / 2"), "aritmética debería parsear sin errores");
+        assertFalse(exprConErrores("(2 ** 3) ** 2"), "potencia entre paréntesis debería parsear sin errores");
         // ** no es asociativo en Ada
         assertTrue(exprConErrores("2 ** 3 ** 2"));
-        assertDoesNotThrow(() -> expr("A mod B rem C"));
+        assertFalse(exprConErrores("A mod B rem C"), "mod/rem debería parsear sin errores");
     }
 
     @Test
     void logica_y_cortocircuito() {
-        assertDoesNotThrow(() -> expr("A and then B or else C"));
-        assertDoesNotThrow(() -> expr("not A xor (B and C)"));
+        assertFalse(exprConErrores("A and then B or else C"), "cortocircuito debería parsear sin errores");
+        assertFalse(exprConErrores("not A xor (B and C)"), "lógica debería parsear sin errores");
     }
 
     @Test
     void relacionales_y_pertenencia() {
-        assertDoesNotThrow(() -> expr("X >= 1 and X <= 10"));
-        assertDoesNotThrow(() -> expr("X in 1 .. 100"));
-        assertDoesNotThrow(() -> expr("X not in 1 .. 100"));
+        assertFalse(exprConErrores("X >= 1 and X <= 10"), "relacionales deberían parsear sin errores");
+        assertFalse(exprConErrores("X in 1 .. 100"), "pertenencia debería parsear sin errores");
+        assertFalse(exprConErrores("X not in 1 .. 100"), "no pertenencia debería parsear sin errores");
     }
 
     @Test
     void concatenacion_llamada_y_campo() {
-        assertDoesNotThrow(() -> expr("Nombre & \" \" & Apellido"));
-        assertDoesNotThrow(() -> expr("Max(A, B) + Registro.Campo"));
-        assertDoesNotThrow(() -> expr("abs (-X)"));
+        assertFalse(exprConErrores("Nombre & \" \" & Apellido"), "concatenación debería parsear sin errores");
+        assertFalse(exprConErrores("Max(A, B) + Registro.Campo"), "llamada y campo deberían parsear sin errores");
+        assertFalse(exprConErrores("abs (-X)"), "abs debería parsear sin errores");
     }
 
     @Test

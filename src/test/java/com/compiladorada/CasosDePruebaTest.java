@@ -54,7 +54,9 @@ class CasosDePruebaTest {
 
                     Path esperado = p.resolveSibling(
                             p.getFileName().toString().replace(".ada", ".expected"));
-                    for (String linea : Files.readAllLines(esperado)) {
+                    List<String> esperados = Files.readAllLines(esperado).stream()
+                            .filter(l -> !l.isBlank()).toList();
+                    for (String linea : esperados) {
                         if (linea.isBlank()) continue;
                         String[] pt = linea.trim().split(":");
                         int ln = Integer.parseInt(pt[0]);
@@ -66,6 +68,8 @@ class CasosDePruebaTest {
                                 "falta el error " + linea + " en " + p.getFileName()
                                         + "; errores reales: " + todos);
                     }
+                    assertEquals(esperados.size(), todos.size(),
+                            () -> "errores extra en " + p.getFileName() + ": " + todos);
                 }));
     }
 }

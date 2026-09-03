@@ -64,6 +64,17 @@ class RecuperacionSintacticaTest {
     }
 
     @Test
+    void programa_valido_con_basura_final_conserva_el_arbol() throws Exception {
+        String fuente = "procedure P is begin null; end P;\n@@@\n";
+        AdaParser p = new AdaParser(new StringReader(fuente));
+        Object nodo = p.programa();
+        List<ErrorCompilacion> e = p.getErroresSintacticos();
+        assertNotNull(nodo, "el procedimiento parseado debe conservarse pese a la basura final");
+        assertFalse(e.isEmpty(), "la basura final debe producir un error");
+        assertEquals(2, e.get(0).linea(), "el error debe apuntar a la basura, no a 1:1");
+    }
+
+    @Test
     void el_parser_se_rinde_ante_entrada_irrecuperable() throws Exception {
         // Cientos de sentencias basura: se supera el tope de 200 y el análisis se interrumpe.
         StringBuilder sb = new StringBuilder("procedure P is begin\n");

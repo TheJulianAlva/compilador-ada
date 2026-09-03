@@ -1,7 +1,6 @@
 package com.compiladorada.sintactico;
 
 import com.compiladorada.generado.AdaParser;
-import com.compiladorada.generado.ParseException;
 import org.junit.jupiter.api.Test;
 
 import java.io.StringReader;
@@ -9,11 +8,6 @@ import java.io.StringReader;
 import static org.junit.jupiter.api.Assertions.*;
 
 class GramaticaSentenciasTest {
-
-    private void parsear(String cuerpo) throws ParseException {
-        String fuente = "procedure P is begin " + cuerpo + " end;";
-        new AdaParser(new StringReader(fuente)).programa();
-    }
 
     private boolean tieneErrores(String cuerpo) {
         String fuente = "procedure P is begin " + cuerpo + " end;";
@@ -28,29 +22,42 @@ class GramaticaSentenciasTest {
 
     @Test
     void asignacion_y_llamada() {
-        assertDoesNotThrow(() -> parsear("X := 1; Poner(X); Iniciar;"));
+        assertFalse(tieneErrores("X := 1; Poner(X); Iniciar;"),
+                "asignación y llamada deberían parsear sin errores");
+    }
+
+    @Test
+    void asignacion_a_elemento_de_arreglo_y_campo_de_registro() {
+        assertFalse(tieneErrores("A(1) := 0; R.C := 0;"),
+                "asignación a A(1) y a R.C deberían parsear sin errores");
+        assertFalse(tieneErrores("Ada.Text_IO.Put_Line(\"x\");"),
+                "llamada calificada con argumentos debería parsear sin errores");
     }
 
     @Test
     void if_elsif_else() {
-        assertDoesNotThrow(() -> parsear(
-                "if X = 1 then Y := 1; elsif X = 2 then Y := 2; else Y := 0; end if;"));
+        assertFalse(tieneErrores(
+                "if X = 1 then Y := 1; elsif X = 2 then Y := 2; else Y := 0; end if;"),
+                "if/elsif/else debería parsear sin errores");
     }
 
     @Test
     void for_con_reverse() {
-        assertDoesNotThrow(() -> parsear(
-                "for I in reverse 1 .. 10 loop Sumar(I); end loop;"));
+        assertFalse(tieneErrores(
+                "for I in reverse 1 .. 10 loop Sumar(I); end loop;"),
+                "for con reverse debería parsear sin errores");
     }
 
     @Test
     void while_loop() {
-        assertDoesNotThrow(() -> parsear("while X < 10 loop X := X + 1; end loop;"));
+        assertFalse(tieneErrores("while X < 10 loop X := X + 1; end loop;"),
+                "while loop debería parsear sin errores");
     }
 
     @Test
     void raise_con_y_sin_nombre() {
-        assertDoesNotThrow(() -> parsear("raise; raise Constraint_Error;"));
+        assertFalse(tieneErrores("raise; raise Constraint_Error;"),
+                "raise con y sin nombre debería parsear sin errores");
     }
 
     @Test
