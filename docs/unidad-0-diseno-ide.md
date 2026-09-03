@@ -163,12 +163,15 @@ Los patrones de literales siguen la tabla de expresiones regulares de
 | `HEX` | `["0"-"9","a"-"f","A"-"F"]` |
 | `EXP` | `["e","E"] (["+","-"])? (<DIGITO>)+` |
 
-**Palabras reservadas** (bloque `TOKEN`, 39 tokens usados por la gramática):
+**Palabras reservadas** (bloque `TOKEN`): 39 tokens `KW_*` declarados; 38 los usa
+alguna producción — `declare` se declara (`<KW_DECLARE: "declare">`) pero **ninguna
+producción lo consume** (los bloques `declare ... begin` no están en el
+subconjunto sintáctico). Los 39 lexemas declarados:
 `procedure`, `function`, `package`, `body`, `is`, `begin`, `end`, `return`,
 `constant`, `type`, `subtype`, `range`, `record`, `array`, `of`, `in`, `out`,
 `if`, `then`, `elsif`, `else`, `loop`, `for`, `while`, `reverse`, `declare`,
 `exception`, `when`, `raise`, `others`, `private`, `null`, `and`, `or`, `xor`,
-`not`, `abs`, `mod`, `rem`. Cada una se declara como token literal (`<KW_IF:
+`not`, `abs`, `mod`, `rem`. Cada uno se declara como token literal (`<KW_IF:
 "if">`, …) porque la gramática necesita escribir `"if"` en sus producciones; el
 orden de declaración de JavaCC hace que ganen frente a `<IDENTIFICADOR>`.
 
@@ -251,12 +254,13 @@ Y como **última** definición del bloque `TOKEN`:
 captura cualquier carácter que ningún otro token aceptó (`$`, `@`, `?`, …). El
 mensaje es `carácter no válido '<c>'`.
 
-En los cinco casos el token **sí aparece en la tabla de tokens** con
-`TipoToken.ERROR`, y `AnalizadorLexico` añade un `ErrorCompilacion` de categoría
-`LEXICO` con la línea y columna del token. El recorrido continúa con el siguiente
-token; solo se detiene si el `TokenManager` lanza `TokenMgrError` (situación no
-esperada con el catch-all presente), en cuyo caso se registra un error léxico
-genérico en `0:0`.
+En los cuatro casos (`CADENA_SIN_CERRAR`, `CARACTER_MALFORMADO`,
+`IDENT_MALFORMADO`, `ERROR_LEXICO`) el token **sí aparece en la tabla de tokens**
+con `TipoToken.ERROR`, y `AnalizadorLexico` añade un `ErrorCompilacion` de
+categoría `LEXICO` con la línea y columna del token. El recorrido continúa con el
+siguiente token; solo se detiene si el `TokenManager` lanza `TokenMgrError`
+—caso aparte, no es un token— (situación no esperada con el catch-all presente),
+en cuyo caso se registra un error léxico genérico en `0:0`.
 
 ---
 
@@ -373,9 +377,11 @@ Observaciones sobre la implementación real frente al fragmento BNF de
 
 ### 4.2 Nodos del AST (JJTree)
 
-Opciones `MULTI = true`, `VISITOR = true`, `NODE_DEFAULT_VOID = true`,
-`TRACK_TOKENS = true`; `nodePackage = com.compiladorada.sintactico.nodos`. Solo
-las producciones anotadas con `#Nombre` generan nodo:
+Opciones del bloque `options { }` de `Ada.jjt`: `MULTI = true`, `VISITOR = true`,
+`NODE_DEFAULT_VOID = true`, `TRACK_TOKENS = true`. El paquete de los nodos
+generados, `com.compiladorada.sintactico.nodos`, se fija fuera de la gramática,
+en el parámetro `<nodePackage>` de la configuración del `javacc-maven-plugin` en
+`pom.xml`. Solo las producciones anotadas con `#Nombre` generan nodo:
 
 `Programa`, `Procedimiento`, `Funcion`, `Paquete`, `DeclaracionTipo`,
 `DeclaracionSubtipo`, `DefinicionTipo`, `ComponenteRegistro`, `DeclaracionVar`,
@@ -578,7 +584,8 @@ com.compiladorada                        ← MOTOR (sin dependencias de Swing)
 ├── errores/
 │   ├── ErrorCompilacion        record { categoria (LEXICO|SINTACTICO), linea, columna, mensaje };
 │   │                                   formatear(nombre) → "archivo:linea:columna: categoria: mensaje"
-│   └── EscritorErrores         vuelca ResultadoCompilacion a output/{tokens,errores_lexicos,errores_sintacticos}.txt
+│   └── EscritorErrores         vuelca ResultadoCompilacion a {tokens,errores_lexicos,errores_sintacticos}.txt
+│                               en la carpeta de salida que le pasa VentanaPrincipal (por defecto output/)
 │
 └── generado/                   AdaParser, AdaParserTokenManager, Token, ParseException, … (JavaCC/JJTree)
 
@@ -613,8 +620,10 @@ com.compiladorada.ide                     ← IDE (Swing + RSyntaxTextArea 3.5.4
   reservadas; solo se usa para clasificar y para el resaltado.
 - **`ErrorCompilacion`** — modelo de error con categoría, posición y mensaje;
   `formatear` produce la línea estilo GCC.
-- **`EscritorErrores`** — serializa `ResultadoCompilacion` a los tres archivos de
-  `output/` (cabecera con fecha ISO + total, luego una línea por entrada).
+- **`EscritorErrores`** — serializa `ResultadoCompilacion` a los tres archivos
+  `.txt` dentro del directorio de salida que recibe como parámetro (por defecto
+  `output/`, fijado en `VentanaPrincipal`): cabecera con fecha ISO + total, luego
+  una línea por entrada.
 - **`TraductorMensajes`** — aislado del parser generado; convierte
   `ParseException` a español.
 - **`AdaParser`** (generado desde `Ada.jjt`) — parser + lógica de recuperación
