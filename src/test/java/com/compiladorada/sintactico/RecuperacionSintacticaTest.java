@@ -51,6 +51,14 @@ class RecuperacionSintacticaTest {
     }
 
     @Test
+    void programa_no_propaga_ParseException_en_entrada_recuperable() {
+        // entrada inválida pero recuperable: falta ';'
+        AdaParser p = new AdaParser(new StringReader("procedure P is begin null end;"));
+        assertDoesNotThrow(() -> p.programa());
+        assertFalse(p.getErroresSintacticos().isEmpty());
+    }
+
+    @Test
     void programa_valido_no_produce_errores() throws Exception {
         assertTrue(errores("procedure P is begin null; end;").isEmpty());
     }
