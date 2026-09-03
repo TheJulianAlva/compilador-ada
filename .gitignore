@@ -32,6 +32,7 @@ nbactions.xml
 *.exe
 *.asm.out
 a.out
+output/
 
 # --- SO ---
 .DS_Store
