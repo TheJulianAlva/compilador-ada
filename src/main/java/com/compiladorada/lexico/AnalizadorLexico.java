@@ -37,7 +37,7 @@ public final class AnalizadorLexico {
             }
             agregarEspeciales(t); // comentarios pegados justo antes de EOF
         } catch (TokenMgrError e) {
-            errores.add(new ErrorCompilacion(Categoria.LEXICO, 0, 0,
+            errores.add(new ErrorCompilacion(Categoria.LEXICO, 1, 1,
                     "no se pudo continuar el análisis léxico: " + e.getMessage()));
         }
     }

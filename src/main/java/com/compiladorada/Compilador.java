@@ -16,17 +16,27 @@ public final class Compilador {
     }
 
     public static ResultadoCompilacion analizar(String fuente, String nombreArchivo) {
+        // nombreArchivo lo usa el IDE al volcar errores; el análisis no lo necesita.
+        if (fuente == null) {
+            fuente = "";
+        }
         AnalizadorLexico lexico = new AnalizadorLexico(fuente);
 
         List<ErrorCompilacion> sintacticos = new ArrayList<>();
         SimpleNode ast = null;
         AdaParser parser = new AdaParser(new StringReader(fuente));
+        boolean interrumpido = false;
         try {
             ast = parser.programa();
         } catch (Throwable t) {
             // la recuperación se rindió, o error inesperado: se preserva lo acumulado
+            interrumpido = true;
         }
         sintacticos.addAll(parser.getErroresSintacticos());
+        if (interrumpido) {
+            sintacticos.add(new ErrorCompilacion(Categoria.SINTACTICO, 1, 1,
+                    "análisis interrumpido: demasiados errores"));
+        }
         if (ast == null && sintacticos.isEmpty()) {
             sintacticos.add(new ErrorCompilacion(Categoria.SINTACTICO, 1, 1,
                     "no se pudo construir el árbol sintáctico"));

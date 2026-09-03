@@ -891,8 +891,12 @@ El IDE se prueba construyendo componentes Swing reales (no *mock*); la suite
   manejadores en tiempo de ejecución.
 - **Construcciones fuera de alcance.** Genéricos, concurrencia, OO, tipos de
   acceso reales, punto fijo, texto internacional y compilación separada no tienen
-  producción: se reconocen léxicamente (son palabras reservadas de Ada 2012) y
-  producen un error sintáctico donde aparezcan.
+  producción. Solo las 39 palabras reservadas declaradas como token propio en
+  `Ada.jjt` provocan un error sintáctico allí donde aparezcan; las otras ~34
+  reservadas de Ada 2012 (`task`, `generic`, `tagged`, ...) se lexan como
+  `IDENTIFICADOR` y el parser las acepta sin error, aunque la tabla de tokens del
+  IDE las siga etiquetando como `PALABRA_RESERVADA`: es una divergencia conocida
+  entre la tabla léxica y el parser.
 
 ### 9.2 Conexión con la Unidad 1 (análisis semántico)
 

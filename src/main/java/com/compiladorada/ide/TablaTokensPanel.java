@@ -39,6 +39,11 @@ public class TablaTokensPanel extends JPanel {
         public int getColumnCount() { return cols.length; }
         public String getColumnName(int c) { return cols[c]; }
 
+        @Override
+        public Class<?> getColumnClass(int c) {
+            return c >= 2 ? Integer.class : String.class;
+        }
+
         public Object getValueAt(int r, int c) {
             TokenLexico t = datos.get(r);
             return switch (c) {

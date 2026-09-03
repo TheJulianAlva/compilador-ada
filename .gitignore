@@ -8,8 +8,8 @@ release.properties
 dependency-reduced-pom.xml
 
 # --- Fuentes generadas por JavaCC ---
-# El .jj vive en src/main/javacc/; el parser/lexer Java se regenera en cada build.
-src/main/java/com/compiladorada/generated/
+# El .jjt vive en src/main/javacc/; el parser/lexer Java se regenera en cada build
+# bajo target/generated-sources/ (ya cubierto por target/).
 
 # --- Compilados Java ---
 *.class
