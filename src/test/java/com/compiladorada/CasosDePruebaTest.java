@@ -19,9 +19,13 @@ class CasosDePruebaTest {
 
     @TestFactory
     Stream<DynamicTest> casos_validos_sin_errores() throws IOException {
-        return Files.list(VALIDOS)
+        List<Path> archivos = Files.list(VALIDOS)
                 .filter(p -> p.toString().endsWith(".ada"))
                 .sorted()
+                .toList();
+        assertTrue(archivos.size() >= 8,
+                "esperados >= 8 casos válidos, encontrados " + archivos.size());
+        return archivos.stream()
                 .map(p -> DynamicTest.dynamicTest(p.getFileName().toString(), () -> {
                     ResultadoCompilacion r = Compilador.analizar(Files.readString(p),
                             p.getFileName().toString());
@@ -34,9 +38,13 @@ class CasosDePruebaTest {
 
     @TestFactory
     Stream<DynamicTest> casos_invalidos_contienen_los_errores_esperados() throws IOException {
-        return Files.list(INVALIDOS)
+        List<Path> archivos = Files.list(INVALIDOS)
                 .filter(p -> p.toString().endsWith(".ada"))
                 .sorted()
+                .toList();
+        assertTrue(archivos.size() >= 10,
+                "esperados >= 10 casos inválidos, encontrados " + archivos.size());
+        return archivos.stream()
                 .map(p -> DynamicTest.dynamicTest(p.getFileName().toString(), () -> {
                     ResultadoCompilacion r = Compilador.analizar(Files.readString(p),
                             p.getFileName().toString());
