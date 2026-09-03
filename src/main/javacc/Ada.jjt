@@ -181,7 +181,32 @@ void tipoRef() : {}
 
 void declaracion() : {}
 {
-    declaracionVar()
+    <KW_TYPE> declaracionTipo()
+  | <KW_SUBTYPE> declaracionSubtipo()
+  | declaracionVar()
+}
+
+void declaracionTipo() #DeclaracionTipo : {}
+{
+    <IDENTIFICADOR> <KW_IS> definicionTipo() ";"
+}
+
+void declaracionSubtipo() #DeclaracionTipo : {}
+{
+    <IDENTIFICADOR> <KW_IS> <IDENTIFICADOR> ( <KW_RANGE> rango() )? ";"
+}
+
+void definicionTipo() : {}
+{
+    <KW_RANGE> rango()
+  | "(" <IDENTIFICADOR> ( "," <IDENTIFICADOR> )* ")"
+  | <KW_RECORD> ( componenteRegistro() )* <KW_END> <KW_RECORD>
+  | <KW_ARRAY> "(" rango() ")" <KW_OF> tipoRef()
+}
+
+void componenteRegistro() : {}
+{
+    <IDENTIFICADOR> ( "," <IDENTIFICADOR> )* ":" tipoRef() ( ":=" expresion() )? ";"
 }
 
 void declaracionVar() #DeclaracionVar : {}
@@ -287,11 +312,28 @@ void primario() : {}
 
 void bloqueExcepcion() : {}
 {
-    <KW_EXCEPTION> <KW_WHEN> <KW_OTHERS> "=>" ( sentencia() )*
+    <KW_EXCEPTION> ( manejador() )+
 }
 
-void paquete() : {}
+void manejador() : {}
 {
-    <KW_PACKAGE> ( <KW_BODY> )? <IDENTIFICADOR> <KW_IS> ( declaracion() )*
-    <KW_END> ( <IDENTIFICADOR> )? ";"
+    <KW_WHEN> ( <KW_OTHERS> | <IDENTIFICADOR> ( "|" <IDENTIFICADOR> )* ) "=>"
+        ( sentencia() )*
+}
+
+void paquete() #Paquete : {}
+{
+    <KW_PACKAGE>
+    (
+        <KW_BODY> <IDENTIFICADOR> <KW_IS>
+            ( declaracion() )*
+        ( <KW_BEGIN> ( sentencia() )* )?
+        ( bloqueExcepcion() )?
+        <KW_END> ( <IDENTIFICADOR> )? ";"
+      |
+        <IDENTIFICADOR> <KW_IS>
+            ( declaracion() )*
+        ( <KW_PRIVATE> ( declaracion() )* )?
+        <KW_END> ( <IDENTIFICADOR> )? ";"
+    )
 }
