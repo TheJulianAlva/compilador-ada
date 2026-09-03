@@ -273,7 +273,7 @@ void termino() : {}
 
 void factor() : {}
 {
-    ( <KW_ABS> | <KW_NOT> )? primario() ( "**" primario() )*
+    ( <KW_ABS> | <KW_NOT> )? primario() ( "**" primario() )?
 }
 
 void primario() : {}

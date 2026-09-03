@@ -18,7 +18,9 @@ class GramaticaExpresionesTest {
     @Test
     void aritmetica_con_precedencia() {
         assertDoesNotThrow(() -> expr("1 + 2 * 3 - 4 / 2"));
-        assertDoesNotThrow(() -> expr("2 ** 3 ** 2"));
+        assertDoesNotThrow(() -> expr("(2 ** 3) ** 2"));
+        // ** no es asociativo en Ada
+        assertThrows(ParseException.class, () -> expr("2 ** 3 ** 2"));
         assertDoesNotThrow(() -> expr("A mod B rem C"));
     }
 
