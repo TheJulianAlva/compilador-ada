@@ -1,0 +1,42 @@
+# --- Maven ---
+target/
+pom.xml.tag
+pom.xml.releaseBackup
+pom.xml.versionsBackup
+pom.xml.next
+release.properties
+dependency-reduced-pom.xml
+
+# --- Fuentes generadas por JavaCC ---
+# El .jj vive en src/main/javacc/; el parser/lexer Java se regenera en cada build.
+src/main/java/com/compiladorada/generated/
+
+# --- Compilados Java ---
+*.class
+
+# --- IDEs ---
+.idea/
+*.iml
+*.ipr
+*.iws
+.vscode/
+.settings/
+.classpath
+.project
+nbproject/
+nbactions.xml
+
+# --- Salidas del compilador (código objeto, ejecutables) ---
+*.o
+*.obj
+*.exe
+*.asm.out
+a.out
+
+# --- SO ---
+.DS_Store
+Thumbs.db
+
+# --- Instrucciones internas para Claude Code (no se versiona) ---
+CLAUDE.md
+docs/CLAUDE.md
