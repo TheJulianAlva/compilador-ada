@@ -72,7 +72,21 @@ public final class AnalizadorLexico {
         tokens.add(new TokenLexico(t.image, tipo, t.beginLine, t.beginColumn));
         if (tipo == TipoToken.ERROR) {
             errores.add(new ErrorCompilacion(Categoria.LEXICO, t.beginLine, t.beginColumn,
-                    "carácter no válido '" + t.image + "'"));
+                    mensajeLexico(t)));
+        }
+    }
+
+    private String mensajeLexico(Token t) {
+        switch (t.kind) {
+            case AdaParserConstants.CADENA_SIN_CERRAR:
+                return "cadena sin cerrar antes de fin de línea";
+            case AdaParserConstants.CARACTER_MALFORMADO:
+                return "literal de carácter mal formado: " + t.image;
+            case AdaParserConstants.IDENT_MALFORMADO:
+                return "identificador no válido '" + t.image
+                        + "': no puede terminar en '_' ni contener '__'";
+            default:
+                return "carácter no válido '" + t.image + "'";
         }
     }
 
@@ -93,6 +107,9 @@ public final class AnalizadorLexico {
             case AdaParserConstants.CADENA:
                 return TipoToken.CADENA;
             case AdaParserConstants.ERROR_LEXICO:
+            case AdaParserConstants.CADENA_SIN_CERRAR:
+            case AdaParserConstants.CARACTER_MALFORMADO:
+            case AdaParserConstants.IDENT_MALFORMADO:
                 return TipoToken.ERROR;
             default:
                 if (esCompuesto(t.kind)) {

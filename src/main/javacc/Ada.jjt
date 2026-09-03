@@ -116,6 +116,19 @@ TOKEN :
   | <CADENA:     "\"" ( (~["\"","\n","\r"]) | "\"\"" )* "\"">
 }
 
+/* ===== Tokens trampa: patrones invalidos que se reconocen para reportarlos =====
+   Se declaran DESPUES de las palabras reservadas, ambos bloques de delimitadores
+   y el bloque de literales, y JUSTO ANTES de <IDENTIFICADOR>: asi los rangos
+   contiguos KW_PROCEDURE..KW_REM y ASIGNA..BARRA no se desplazan. */
+TOKEN :
+{
+    <CADENA_SIN_CERRAR: "\"" (~["\"","\n","\r"])* ("\r\n" | "\n" | "\r")>
+  | <CARACTER_MALFORMADO: "'" (~["'","\n","\r"]) (~["'","\n","\r"])+ "'">
+  | <IDENT_MALFORMADO:
+        ["a"-"z","A"-"Z"] (["a"-"z","A"-"Z","0"-"9","_"])* "_"
+      | ["a"-"z","A"-"Z"] (["a"-"z","A"-"Z","0"-"9"])* ("_" ("_")+ (["a"-"z","A"-"Z","0"-"9"])*)+ >
+}
+
 /* ===== Identificador ===== */
 TOKEN :
 {
