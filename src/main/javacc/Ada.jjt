@@ -195,12 +195,94 @@ void declaracionVar() #DeclaracionVar : {}
 void sentencia() : {}
 {
     <KW_NULL> ";"
-  | <IDENTIFICADOR> ":=" expresion() ";"
+  | sentenciaIf()
+  | sentenciaFor()
+  | sentenciaWhile()
+  | sentenciaRaise()
+  | LOOKAHEAD(<IDENTIFICADOR> ":=") asignacion()
+  | llamadaProc()
+}
+
+void asignacion() #Asignacion : {}
+{
+    <IDENTIFICADOR> ":=" expresion() ";"
+}
+
+void llamadaProc() #LlamadaProc : {}
+{
+    <IDENTIFICADOR> ( "(" expresion() ( "," expresion() )* ")" )? ";"
+}
+
+void sentenciaIf() #If : {}
+{
+    <KW_IF> expresion() <KW_THEN> ( sentencia() )*
+    ( <KW_ELSIF> expresion() <KW_THEN> ( sentencia() )* )*
+    ( <KW_ELSE> ( sentencia() )* )?
+    <KW_END> <KW_IF> ";"
+}
+
+void sentenciaFor() #For : {}
+{
+    <KW_FOR> <IDENTIFICADOR> <KW_IN> ( <KW_REVERSE> )? rango() <KW_LOOP>
+        ( sentencia() )*
+    <KW_END> <KW_LOOP> ";"
+}
+
+void sentenciaWhile() #While : {}
+{
+    <KW_WHILE> expresion() <KW_LOOP>
+        ( sentencia() )*
+    <KW_END> <KW_LOOP> ";"
+}
+
+void sentenciaRaise() : {}
+{
+    <KW_RAISE> ( <IDENTIFICADOR> )? ";"
+}
+
+void rango() : {}
+{
+    expresion() ".." expresion()
 }
 
 void expresion() : {}
 {
-    <IDENTIFICADOR> | <ENTERO> | <REAL> | <BASADO> | <CARACTER> | <CADENA>
+    relacion()
+    ( ( <KW_AND> ( LOOKAHEAD(2) <KW_THEN> )? | <KW_OR> ( LOOKAHEAD(2) <KW_ELSE> )? | <KW_XOR> )
+      relacion() )*
+}
+
+void relacion() : {}
+{
+    simple()
+    (
+        ( "=" | <NEQ> | "<" | <LEQ> | ">" | <GEQ> ) simple()
+      | ( <KW_NOT> )? <KW_IN> rango()
+    )?
+}
+
+void simple() : {}
+{
+    ( "+" | "-" )? termino() ( ( "+" | "-" | "&" ) termino() )*
+}
+
+void termino() : {}
+{
+    factor() ( ( "*" | "/" | <KW_MOD> | <KW_REM> ) factor() )*
+}
+
+void factor() : {}
+{
+    ( <KW_ABS> | <KW_NOT> )? primario() ( "**" primario() )*
+}
+
+void primario() : {}
+{
+    "(" expresion() ")"
+  | <ENTERO> | <REAL> | <BASADO> | <CARACTER> | <CADENA> | <KW_NULL>
+  | <IDENTIFICADOR>
+      ( "(" expresion() ( "," expresion() )* ")" )?
+      ( "." <IDENTIFICADOR> )*
 }
 
 void bloqueExcepcion() : {}
