@@ -16,7 +16,7 @@ import com.compiladorada.sintactico.nodos.SimpleNode;
 public class AdaParser {
 
     /** Errores sintácticos acumulados durante el análisis en modo pánico. */
-    public final java.util.List<com.compiladorada.errores.ErrorCompilacion> erroresSintacticos =
+    private final java.util.List<com.compiladorada.errores.ErrorCompilacion> erroresSintacticos =
             new java.util.ArrayList<com.compiladorada.errores.ErrorCompilacion>();
 
     public java.util.List<com.compiladorada.errores.ErrorCompilacion> getErroresSintacticos() {
@@ -30,8 +30,8 @@ public class AdaParser {
     private void registrar(ParseException e) {
         Token t = (e.currentToken != null && e.currentToken.next != null)
                 ? e.currentToken.next : e.currentToken;
-        int linea = t != null ? t.beginLine : 0;
-        int col = t != null ? t.beginColumn : 0;
+        int linea = (t != null && t.beginLine > 0) ? t.beginLine : 1;
+        int col = (t != null && t.beginColumn > 0) ? t.beginColumn : 1;
         if (!esFantasma(linea, col)) {
             String msg = com.compiladorada.sintactico.TraductorMensajes.traducir(e);
             erroresSintacticos.add(new com.compiladorada.errores.ErrorCompilacion(
@@ -167,8 +167,8 @@ TOKEN :
     <#DIGITO:    ["0"-"9"]>
   | <#HEX:       ["0"-"9","a"-"f","A"-"F"]>
   | <#EXP:       ["e","E"] (["+","-"])? (<DIGITO>)+>
-  | <ENTERO:     <DIGITO> ("_")? (<DIGITO>)* >
-  | <REAL:       <DIGITO> ("_")? (<DIGITO>)* "." <DIGITO> ("_")? (<DIGITO>)* (<EXP>)? >
+  | <ENTERO:     <DIGITO> ( ("_")? <DIGITO> )* >
+  | <REAL:       <DIGITO> ( ("_")? <DIGITO> )* "." <DIGITO> ( ("_")? <DIGITO> )* (<EXP>)? >
   | <BASADO:     (<DIGITO>)+ "#" <HEX> (("_")? <HEX>)* ("." <HEX> (("_")? <HEX>)*)? "#" (<EXP>)? >
   | <CARACTER:   "'" (~["'","\n","\r"]) "'">
   | <CADENA:     "\"" ( (~["\"","\n","\r"]) | "\"\"" )* "\"">
@@ -215,7 +215,11 @@ SimpleNode programa() #Programa :
             }
         }
     )+
-    <EOF>
+    try {
+        <EOF>
+    } catch (ParseException e) {
+        registrar(e);
+    }
     { return jjtThis; }
 }
 
@@ -263,7 +267,7 @@ void parametro() #Parametro : {}
     tipoRef()
 }
 
-/* Referencia a un tipo por nombre; la definición de tipos nuevos va en Task 8. */
+/* Referencia a un tipo por nombre. */
 void tipoRef() : {}
 {
     <IDENTIFICADOR>
@@ -313,7 +317,16 @@ void declaracionVar() #DeclaracionVar : {}
     ( ":=" expresion() )? ";"
 }
 
-/* ===== Stubs temporales (Tasks 6-8 los reemplazan) ===== */
+/* Nombre: identificador con indexación y calificación encadenadas
+   (p. ej. A(I), R.Campo, Ada.Text_IO.Put_Line). */
+void nombre() : {}
+{
+    <IDENTIFICADOR>
+    (
+        "(" expresion() ( "," expresion() )* ")"
+      | "." <IDENTIFICADOR>
+    )*
+}
 
 void sentencia() : {}
 {
@@ -323,7 +336,7 @@ void sentencia() : {}
       | sentenciaFor()
       | sentenciaWhile()
       | sentenciaRaise()
-      | LOOKAHEAD(<IDENTIFICADOR> ":=") asignacion()
+      | LOOKAHEAD(nombre() ":=") asignacion()
       | llamadaProc()
     } catch (ParseException e) {
         registrar(e);
@@ -336,12 +349,12 @@ void sentencia() : {}
 
 void asignacion() #Asignacion : {}
 {
-    <IDENTIFICADOR> ":=" expresion() ";"
+    nombre() ":=" expresion() ";"
 }
 
 void llamadaProc() #LlamadaProc : {}
 {
-    <IDENTIFICADOR> ( "(" expresion() ( "," expresion() )* ")" )? ";"
+    nombre() ";"
 }
 
 void sentenciaIf() #If : {}
@@ -411,9 +424,7 @@ void primario() : {}
 {
     "(" expresion() ")"
   | <ENTERO> | <REAL> | <BASADO> | <CARACTER> | <CADENA> | <KW_NULL>
-  | <IDENTIFICADOR>
-      ( "(" expresion() ( "," expresion() )* ")" )?
-      ( "." <IDENTIFICADOR> )*
+  | nombre()
 }
 
 void bloqueExcepcion() : {}
