@@ -17,6 +17,7 @@ import java.awt.BorderLayout;
 import java.awt.Desktop;
 import java.awt.event.KeyEvent;
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
@@ -128,23 +129,27 @@ public class VentanaPrincipal extends JFrame {
         tablaTokens.setTokens(r.tokens());
         panelErrores.setErrores(r.erroresLexicos(), r.erroresSintacticos());
 
+        Path fuenteSinGuardar = null;
         try {
             Files.createDirectories(directorioSalida);
             if (editor.getRutaArchivo().isEmpty()) {
-                Path tmp = directorioSalida.resolve("fuente_sin_guardar.ada");
-                Files.writeString(tmp, fuente);
-                barraEstado.setResultado("Fuente sin guardar volcada a " + tmp.toAbsolutePath());
+                fuenteSinGuardar = directorioSalida.resolve("fuente_sin_guardar.ada");
+                Files.writeString(fuenteSinGuardar, fuente);
             }
             EscritorErrores.volcar(r, directorioSalida, nombre);
-        } catch (IOException | RuntimeException e) {
+        } catch (IOException | UncheckedIOException e) {
             barraEstado.setResultado("No se pudo escribir en " + directorioSalida.toAbsolutePath());
             return;
         }
 
-        barraEstado.setResultado(String.format(
+        String mensaje = String.format(
                 "Compilado: %d léxicos, %d sintácticos — %s actualizado",
                 r.erroresLexicos().size(), r.erroresSintacticos().size(),
-                directorioSalida.toAbsolutePath()));
+                directorioSalida.toAbsolutePath());
+        if (fuenteSinGuardar != null) {
+            mensaje += " (fuente sin guardar en " + fuenteSinGuardar.toAbsolutePath() + ")";
+        }
+        barraEstado.setResultado(mensaje);
     }
 
     private void irA(int linea, int columna) {
@@ -182,10 +187,11 @@ public class VentanaPrincipal extends JFrame {
     private void abrirCarpetaSalida() {
         try {
             Files.createDirectories(directorioSalida);
-            if (Desktop.isDesktopSupported()) {
+            if (Desktop.isDesktopSupported()
+                    && Desktop.getDesktop().isSupported(Desktop.Action.OPEN)) {
                 Desktop.getDesktop().open(directorioSalida.toFile());
             }
-        } catch (IOException ignore) {
+        } catch (IOException | RuntimeException ignore) {
         }
     }
 
