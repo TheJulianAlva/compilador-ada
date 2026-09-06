@@ -67,6 +67,31 @@ class AnalizadorLexicoTest {
     }
 
     @Test
+    void caracter_ajeno_dentro_de_palabra_produce_un_solo_token_error() {
+        //  "i@f" no debe partirse en i / @ / f: es UN token invalido.
+        AnalizadorLexico a = new AnalizadorLexico("procedure P is begin i@f X; end P;");
+        List<TokenLexico> errores = a.tokens().stream()
+                .filter(t -> t.tipo() == TipoToken.ERROR)
+                .toList();
+        assertEquals(1, errores.size());
+        assertEquals("i@f", errores.get(0).lexema());
+
+        List<ErrorCompilacion> e = a.errores();
+        assertEquals(1, e.size());
+        assertEquals(ErrorCompilacion.Categoria.LEXICO, e.get(0).categoria());
+        assertTrue(e.get(0).mensaje().contains("i@f"));
+    }
+
+    @Test
+    void numero_con_caracter_ajeno_pegado_es_un_solo_token_error() {
+        List<TokenLexico> t = new AnalizadorLexico("X := 10$2;").tokens();
+        assertTrue(t.stream().anyMatch(tok -> tok.tipo() == TipoToken.ERROR
+                && tok.lexema().equals("10$2")));
+        // el ';' final se conserva como delimitador, no se lo traga el token invalido
+        assertEquals(TipoToken.DELIMITADOR_SIMPLE, t.get(t.size() - 1).tipo());
+    }
+
+    @Test
     void reporta_linea_y_columna_correctas() {
         List<TokenLexico> t = new AnalizadorLexico("procedure\n  P").tokens();
         assertEquals(2, t.get(1).linea());

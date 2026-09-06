@@ -194,8 +194,8 @@ maximal-munch de JavaCC los prefiera):
 
 | Token | Expresión regular (JavaCC) | Descripción |
 |---|---|---|
-| `ENTERO` | `<DIGITO> ("_")? (<DIGITO>)*` | entero decimal, admite un único `_` separador |
-| `REAL` | `<DIGITO> ("_")? (<DIGITO>)* "." <DIGITO> ("_")? (<DIGITO>)* (<EXP>)?` | punto flotante con exponente opcional |
+| `ENTERO` | `<DIGITO> ( ("_")? <DIGITO> )*` | entero decimal; `_` como separador entre dígitos (`1_000_000`), nunca al final |
+| `REAL` | `<DIGITO> ( ("_")? <DIGITO> )* "." <DIGITO> ( ("_")? <DIGITO> )* (<EXP>)?` | punto flotante con exponente opcional |
 | `BASADO` | `(<DIGITO>)+ "#" <HEX> (("_")? <HEX>)* ("." <HEX> (("_")? <HEX>)*)? "#" (<EXP>)?` | literal con base explícita, p. ej. `16#FF#`, `2#1010#` |
 | `CARACTER` | `"'" (~["'","\n","\r"]) "'"` | literal de carácter |
 | `CADENA` | `"\"" ( (~["\"","\n","\r"]) \| "\"\"" )* "\""` | cadena; `""` interno es comilla escapada |
@@ -236,14 +236,24 @@ Los tipos predefinidos (`Integer`, `Float`, `Boolean`, `Character`, `String`)
 
 Para reportar errores léxicos sin abortar el recorrido, la gramática declara
 —justo antes de `<IDENTIFICADOR>` y del catch-all, para no desplazar los rangos
-de `kind` contiguos que asume `AnalizadorLexico`— tres **tokens trampa** que
+de `kind` contiguos que asume `AnalizadorLexico`— cuatro **tokens trampa** que
 casan patrones inválidos y permiten emitir un mensaje específico:
 
 | Token trampa | Casa | Mensaje (`AnalizadorLexico.mensajeLexico`) |
 |---|---|---|
 | `CADENA_SIN_CERRAR` | `"` seguido de texto y fin de línea sin `"` de cierre | `cadena sin cerrar antes de fin de línea` |
 | `CARACTER_MALFORMADO` | `'` con dos o más caracteres antes del `'` de cierre | `literal de carácter mal formado: <lexema>` |
-| `IDENT_MALFORMADO` | identificador que termina en `_` **o** que contiene `__` | `identificador no válido '<lexema>': no puede terminar en '_' ni contener '__'` |
+| `IDENT_MALFORMADO` | identificador que termina en `_` **o** que contiene `__` (sin caracteres ajenos) | `identificador no válido '<lexema>': no puede terminar en '_' ni contener '__'` |
+| `LEXEMA_INVALIDO` | secuencia contigua de letras/dígitos/`_` con **al menos un** carácter ajeno al alfabeto (`@ $ ? \ ! ~`, no-ASCII…) | `secuencia no válida '<lexema>': contiene caracteres ajenos al lenguaje` |
+
+`LEXEMA_INVALIDO` se define con dos clases privadas: `CAR_PALABRA`
+(`[a-zA-Z0-9_]`) y `CAR_AJENO` (cualquier carácter que no sea de palabra, ni
+espacio en blanco, ni inicio de un delimitador válido). El patrón es
+`(CAR_PALABRA | CAR_AJENO)* CAR_AJENO (CAR_PALABRA | CAR_AJENO)*`, es decir, un
+tramo maximal que exige ≥ 1 carácter ajeno. Como es un emparejamiento más largo
+que `<IDENTIFICADOR>` / `<ENTERO>`, JavaCC lo prefiere: **`i@f` sale como un
+único token de error**, no partido en `i` / `@` / `f`. El tramo no cruza
+espacios ni delimitadores, así que `x $ y` sí produce tres tokens.
 
 Y como **última** definición del bloque `TOKEN`:
 
@@ -251,16 +261,17 @@ Y como **última** definición del bloque `TOKEN`:
 <ERROR_LEXICO: ~[]>
 ```
 
-captura cualquier carácter que ningún otro token aceptó (`$`, `@`, `?`, …). El
-mensaje es `carácter no válido '<c>'`.
+red de seguridad para un carácter suelto que pertenece al alfabeto de
+delimitadores pero no forma token por sí solo —en la práctica, un `#` aislado
+fuera de un literal con base (`16#FF#`)—. El mensaje es `carácter no válido '<c>'`.
 
-En los cuatro casos (`CADENA_SIN_CERRAR`, `CARACTER_MALFORMADO`,
-`IDENT_MALFORMADO`, `ERROR_LEXICO`) el token **sí aparece en la tabla de tokens**
-con `TipoToken.ERROR`, y `AnalizadorLexico` añade un `ErrorCompilacion` de
-categoría `LEXICO` con la línea y columna del token. El recorrido continúa con el
-siguiente token; solo se detiene si el `TokenManager` lanza `TokenMgrError`
-—caso aparte, no es un token— (situación no esperada con el catch-all presente),
-en cuyo caso se registra un error léxico genérico en `0:0`.
+En los cinco casos (`CADENA_SIN_CERRAR`, `CARACTER_MALFORMADO`,
+`IDENT_MALFORMADO`, `LEXEMA_INVALIDO`, `ERROR_LEXICO`) el token **sí aparece en
+la tabla de tokens** con `TipoToken.ERROR`, y `AnalizadorLexico` añade un
+`ErrorCompilacion` de categoría `LEXICO` con la línea y columna del token. El
+recorrido continúa con el siguiente token; solo se detiene si el `TokenManager`
+lanza `TokenMgrError` —caso aparte, no es un token— (situación no esperada con el
+catch-all presente), en cuyo caso se registra un error léxico genérico en `1:1`.
 
 ---
 
@@ -421,9 +432,9 @@ pasada y `Compilador.analizar` **nunca** propaga una excepción al IDE.
 ### 5.1 Errores léxicos
 
 Ya descritos en la sección 3.4: tokens trampa (`CADENA_SIN_CERRAR`,
-`CARACTER_MALFORMADO`, `IDENT_MALFORMADO`) y catch-all `<ERROR_LEXICO: ~[]>`. El
-recorrido léxico registra el error y continúa con el siguiente token; el token
-inválido queda en la tabla con tipo `ERROR`.
+`CARACTER_MALFORMADO`, `IDENT_MALFORMADO`, `LEXEMA_INVALIDO`) y catch-all
+`<ERROR_LEXICO: ~[]>`. El recorrido léxico registra el error y continúa con el
+siguiente token; el token inválido queda en la tabla con tipo `ERROR`.
 
 ### 5.2 Modo pánico con conjuntos de sincronización
 
@@ -553,9 +564,9 @@ Salida — `errores_lexicos.txt`:
 ```
 
 El recorrido léxico marca `contador_` (trampa `IDENT_MALFORMADO`) y `@`
-(catch-all) como errores léxicos; en paralelo el parser ve `contador_` como token
-`IDENT_MALFORMADO` —que no encaja en `declaracion()`— y emite un error
-sintáctico. Ambas listas se muestran en pestañas separadas.
+(trampa `LEXEMA_INVALIDO`) como errores léxicos; en paralelo el parser ve
+`contador_` como token `IDENT_MALFORMADO` —que no encaja en `declaracion()`— y
+emite un error sintáctico. Ambas listas se muestran en pestañas separadas.
 
 ---
 
@@ -822,30 +833,30 @@ detecta más de un error por pasada y las categorías no se contaminan entre sí
 
 ### 8.2 Conteo total de tests
 
-`mvn -q test` → **109 tests, 0 fallos, 0 errores** (agregado de
+`mvn -q test` → **117 tests, 0 fallos, 0 errores** (agregado de
 `target/surefire-reports/`). Desglose por clase:
 
 | Clase de test | Tests | Cubre |
 |---|---:|---|
-| `com.compiladorada.CasosDePruebaTest` | 18 | batería `.ada` válidos (8) + inválidos (10) |
+| `com.compiladorada.CasosDePruebaTest` | 19 | batería `.ada` válidos (9) + inválidos (10), `@TestFactory` |
 | `com.compiladorada.CompiladorTest` | 4 | fachada: nunca lanza, resultado no nulo, AST presente/ausente |
 | `com.compiladorada.ModeloDatosTest` | 5 | records `TokenLexico`, `ErrorCompilacion`, `ResultadoCompilacion` |
 | `com.compiladorada.errores.EscritorErroresTest` | 3 | formato de línea, cabecera, sobrescritura |
-| `com.compiladorada.lexico.AnalizadorLexicoTest` | 7 | clasificación de tokens, comentarios, posiciones |
-| `com.compiladorada.lexico.LexerHumoTest` | 4 | humo del `TokenManager` generado |
+| `com.compiladorada.lexico.AnalizadorLexicoTest` | 11 | clasificación de tokens, `_` en enteros, `LEXEMA_INVALIDO`, comentarios, posiciones, guarda de rangos |
+| `com.compiladorada.lexico.LexerHumoTest` | 5 | humo del `TokenManager` generado; `i@f` como un solo token |
 | `com.compiladorada.lexico.PalabrasReservadasTest` | 4 | 73 palabras, case-insensitive, tipos predefinidos no reservados |
 | `com.compiladorada.lexico.RecuperacionLexicaTest` | 6 | tokens trampa + catch-all |
 | `com.compiladorada.sintactico.GramaticaSubprogramasTest` | 6 | `procedure` / `function` / `package` |
 | `com.compiladorada.sintactico.GramaticaTiposTest` | 7 | `type`, `subtype`, `record`, `array`, enumerados |
-| `com.compiladorada.sintactico.GramaticaSentenciasTest` | 7 | `if`, `for`, `while`, asignación, llamada, `raise` |
-| `com.compiladorada.sintactico.GramaticaExpresionesTest` | 5 | precedencia, cortocircuito, pertenencia, `**` |
-| `com.compiladorada.sintactico.RecuperacionSintacticaTest` | 6 | modo pánico, errores fantasma, múltiples errores |
+| `com.compiladorada.sintactico.GramaticaSentenciasTest` | 8 | `if`, `for`, `while`, asignación (incl. `A(i)` y `R.campo`), llamada, `raise` |
+| `com.compiladorada.sintactico.GramaticaExpresionesTest` | 5 | precedencia, cortocircuito, pertenencia, `**` no asociativo |
+| `com.compiladorada.sintactico.RecuperacionSintacticaTest` | 7 | modo pánico, errores fantasma, múltiples errores, basura final |
 | `com.compiladorada.sintactico.AstTest` | 5 | nodos JJTree generados y posiciones |
 | `com.compiladorada.ide.EditorPanelTest` | 6 | nuevo/abrir/guardar, flag modificado |
 | `com.compiladorada.ide.PanelesTest` | 7 | `TablaTokensPanel`, `PanelErrores`, `BarraEstado` |
 | `com.compiladorada.ide.VentanaPrincipalTest` | 3 | flujo `compilar()`, escritura de `output/`, salto a error |
 | `com.compiladorada.ide.AdaTokenMakerTest` | 6 | resaltado: palabras reservadas, comentarios, cadenas, números |
-| **Total** | **109** | |
+| **Total** | **117** | |
 
 El IDE se prueba construyendo componentes Swing reales (no *mock*); la suite
 **no** es portable a un CI *headless* sin un servidor X virtual (ver sección 9).
