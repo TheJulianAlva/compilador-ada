@@ -185,6 +185,23 @@ TOKEN :
   | <IDENT_MALFORMADO:
         ["a"-"z","A"-"Z"] (["a"-"z","A"-"Z","0"-"9","_"])* "_"
       | ["a"-"z","A"-"Z"] (["a"-"z","A"-"Z","0"-"9"])* ("_" ("_")+ (["a"-"z","A"-"Z","0"-"9"])*)+ >
+
+/* Caracteres que forman "palabra" (letras, digitos, guion bajo). */
+  | <#CAR_PALABRA: ["a"-"z","A"-"Z","0"-"9","_"] >
+
+/* Un caracter que NO pertenece al alfabeto del lenguaje: cualquiera que no sea
+   caracter de palabra, ni espacio en blanco, ni inicio de un delimitador valido.
+   Ej.: @ $ ! ? \ ~ ^ % { } [ ] y letras acentuadas / no ASCII. */
+  | <#CAR_AJENO: ~["a"-"z","A"-"Z","0"-"9","_",
+                   " ","\t","\f","\r","\n",
+                   "(",")",",",".",":",";","=","<",">","+","-","*","/","&","|","'","\"","#"] >
+
+/* Secuencia contigua de caracteres de palabra y/o ajenos que contiene AL MENOS
+   uno ajeno. Al ser mas larga que <IDENTIFICADOR> / <ENTERO>, JavaCC la prefiere,
+   de modo que "i@f" o "10$2" salen como UN SOLO token de error en vez de partirse.
+   No cruza espacios en blanco ni delimitadores validos. */
+  | <LEXEMA_INVALIDO:
+        ( <CAR_PALABRA> | <CAR_AJENO> )* <CAR_AJENO> ( <CAR_PALABRA> | <CAR_AJENO> )* >
 }
 
 /* ===== Identificador ===== */

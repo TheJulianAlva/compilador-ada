@@ -85,6 +85,9 @@ public final class AnalizadorLexico {
             case AdaParserConstants.IDENT_MALFORMADO:
                 return "identificador no válido '" + t.image
                         + "': no puede terminar en '_' ni contener '__'";
+            case AdaParserConstants.LEXEMA_INVALIDO:
+                return "secuencia no válida '" + t.image
+                        + "': contiene caracteres ajenos al lenguaje";
             default:
                 return "carácter no válido '" + t.image + "'";
         }
@@ -110,6 +113,7 @@ public final class AnalizadorLexico {
             case AdaParserConstants.CADENA_SIN_CERRAR:
             case AdaParserConstants.CARACTER_MALFORMADO:
             case AdaParserConstants.IDENT_MALFORMADO:
+            case AdaParserConstants.LEXEMA_INVALIDO:
                 return TipoToken.ERROR;
             default:
                 if (esCompuesto(t.kind)) {

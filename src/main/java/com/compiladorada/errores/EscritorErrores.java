@@ -21,8 +21,13 @@ public final class EscritorErrores {
             Files.createDirectories(dirSalida);
             escribirErrores(dirSalida.resolve("errores_lexicos.txt"),
                     "ERRORES LÉXICOS", r.erroresLexicos(), nombreArchivoFuente);
-            escribirErrores(dirSalida.resolve("errores_sintacticos.txt"),
-                    "ERRORES SINTÁCTICOS", r.erroresSintacticos(), nombreArchivoFuente);
+            if (r.sintacticoOmitido()) {
+                escribirSintacticoOmitido(dirSalida.resolve("errores_sintacticos.txt"),
+                        r.erroresLexicos().size());
+            } else {
+                escribirErrores(dirSalida.resolve("errores_sintacticos.txt"),
+                        "ERRORES SINTÁCTICOS", r.erroresSintacticos(), nombreArchivoFuente);
+            }
             escribirTokens(dirSalida.resolve("tokens.txt"), r.tokens());
         } catch (IOException e) {
             throw new UncheckedIOException(e);
@@ -44,6 +49,17 @@ public final class EscritorErrores {
             }
         }
         Files.writeString(destino, sb.toString());
+    }
+
+    private static void escribirSintacticoOmitido(Path destino, int erroresLexicos) throws IOException {
+        String sb = "== ERRORES SINTÁCTICOS ==\n"
+                + "Compilado: " + LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME) + '\n'
+                + "\n"
+                + "Análisis sintáctico OMITIDO: hay " + erroresLexicos
+                + (erroresLexicos == 1 ? " error léxico" : " errores léxicos")
+                + " pendiente" + (erroresLexicos == 1 ? "" : "s") + ".\n"
+                + "Corrígelo" + (erroresLexicos == 1 ? "" : "s") + " y vuelve a compilar.\n";
+        Files.writeString(destino, sb);
     }
 
     private static void escribirTokens(Path destino, List<TokenLexico> tokens) throws IOException {

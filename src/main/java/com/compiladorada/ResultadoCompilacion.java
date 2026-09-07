@@ -15,4 +15,15 @@ public record ResultadoCompilacion(
     public boolean tieneErrores() {
         return !erroresLexicos.isEmpty() || !erroresSintacticos.isEmpty();
     }
+
+    /**
+     * {@code true} si el análisis sintáctico NO se ejecutó por haber errores
+     * léxicos. Las fases son secuenciales: el parser solo corre cuando la fase
+     * léxica está limpia. Cuando es {@code true}, {@link #erroresSintacticos()}
+     * está vacía y {@link #ast()} es {@code null} porque no se analizó, no
+     * porque el programa sea sintácticamente correcto.
+     */
+    public boolean sintacticoOmitido() {
+        return !erroresLexicos.isEmpty();
+    }
 }

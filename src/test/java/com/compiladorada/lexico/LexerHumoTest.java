@@ -55,8 +55,17 @@ class LexerHumoTest {
     }
 
     @Test
-    void caracter_ilegal_produce_token_ERROR_LEXICO() {
+    void caracter_ilegal_aislado_produce_token_LEXEMA_INVALIDO() {
         List<Token> t = tokenizar("x $ y");
-        assertTrue(t.stream().anyMatch(tok -> tok.kind == AdaParserConstants.ERROR_LEXICO));
+        assertTrue(t.stream().anyMatch(tok -> tok.kind == AdaParserConstants.LEXEMA_INVALIDO));
+    }
+
+    @Test
+    void caracter_ilegal_dentro_de_palabra_no_parte_el_token() {
+        //  "i@f" debe salir como UN solo token de error, no como i / @ / f.
+        List<Token> t = tokenizar("i@f");
+        assertEquals(1, t.size());
+        assertEquals(AdaParserConstants.LEXEMA_INVALIDO, t.get(0).kind);
+        assertEquals("i@f", t.get(0).image);
     }
 }

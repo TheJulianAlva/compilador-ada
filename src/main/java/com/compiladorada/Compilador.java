@@ -22,6 +22,13 @@ public final class Compilador {
         }
         AnalizadorLexico lexico = new AnalizadorLexico(fuente);
 
+        // Fases secuenciales: el análisis sintáctico solo se ejecuta si la fase
+        // léxica está limpia. Con errores léxicos se devuelve el resultado con la
+        // lista sintáctica vacía y sin AST (ver ResultadoCompilacion.sintacticoOmitido()).
+        if (!lexico.errores().isEmpty()) {
+            return new ResultadoCompilacion(lexico.tokens(), lexico.errores(), List.of(), null);
+        }
+
         List<ErrorCompilacion> sintacticos = new ArrayList<>();
         SimpleNode ast = null;
         AdaParser parser = new AdaParser(new StringReader(fuente));

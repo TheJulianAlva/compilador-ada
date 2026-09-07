@@ -16,9 +16,10 @@ class EscritorErroresTest {
 
     @Test
     void escribe_los_tres_archivos_con_formato_esperado(@TempDir Path dir) throws Exception {
+        //  Fase léxica limpia: el archivo sintáctico lista sus errores.
         ResultadoCompilacion r = new ResultadoCompilacion(
                 List.of(new TokenLexico("Hola", TipoToken.IDENTIFICADOR, 1, 1)),
-                List.of(new ErrorCompilacion(ErrorCompilacion.Categoria.LEXICO, 2, 8, "carácter no válido '$'")),
+                List.of(),
                 List.of(new ErrorCompilacion(ErrorCompilacion.Categoria.SINTACTICO, 3, 1, "se esperaba ';'")),
                 null);
 
@@ -28,11 +29,27 @@ class EscritorErroresTest {
         String sin = Files.readString(dir.resolve("errores_sintacticos.txt"));
         String tok = Files.readString(dir.resolve("tokens.txt"));
 
-        assertTrue(lex.contains("prog.ada:2:8: error léxico: carácter no válido '$'"));
-        assertTrue(lex.contains("1 error"));
+        assertTrue(lex.contains("Total: 0 errores") || lex.contains("Sin errores"));
         assertTrue(sin.contains("prog.ada:3:1: error sintáctico: se esperaba ';'"));
         assertTrue(tok.contains("Hola"));
         assertTrue(tok.contains("IDENTIFICADOR"));
+    }
+
+    @Test
+    void con_errores_lexicos_el_archivo_sintactico_dice_omitido(@TempDir Path dir) throws Exception {
+        ResultadoCompilacion r = new ResultadoCompilacion(
+                List.of(),
+                List.of(new ErrorCompilacion(ErrorCompilacion.Categoria.LEXICO, 2, 8, "carácter no válido '$'")),
+                List.of(),   // vacía: el parser no corrió
+                null);
+
+        EscritorErrores.volcar(r, dir, "prog.ada");
+
+        String lex = Files.readString(dir.resolve("errores_lexicos.txt"));
+        String sin = Files.readString(dir.resolve("errores_sintacticos.txt"));
+        assertTrue(lex.contains("prog.ada:2:8: error léxico: carácter no válido '$'"));
+        assertTrue(sin.contains("OMITIDO"));
+        assertFalse(sin.contains("Sin errores"), "no debe decir 'Sin errores' cuando en realidad no se analizó");
     }
 
     @Test

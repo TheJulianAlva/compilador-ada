@@ -71,4 +71,14 @@ class PanelesTest {
         p.setErrores(List.of(new ErrorCompilacion(Categoria.LEXICO, 5, 3, "x")), List.of());
         assertEquals(0, llamadas.get());
     }
+
+    @Test
+    void sintactico_omitido_no_cuenta_como_error_pero_avisa() {
+        PanelErrores p = new PanelErrores();
+        p.setErrores(List.of(new ErrorCompilacion(Categoria.LEXICO, 2, 1, "x")), List.of(), true);
+        assertEquals(1, p.getFilasLexicas());
+        //  getFilasSintacticas() sigue siendo el conteo de ERRORES sintácticos (0),
+        //  aunque la pestaña muestre una fila informativa de aviso.
+        assertEquals(0, p.getFilasSintacticas());
+    }
 }
