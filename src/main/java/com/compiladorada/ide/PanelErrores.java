@@ -34,12 +34,28 @@ public class PanelErrores extends JPanel {
     }
 
     public void setErrores(List<ErrorCompilacion> lex, List<ErrorCompilacion> sin) {
+        setErrores(lex, sin, false);
+    }
+
+    /**
+     * @param sintacticoOmitido si {@code true}, la pestaña sintáctica indica que
+     *        el análisis no se ejecutó por haber errores léxicos (no que el
+     *        programa sea correcto).
+     */
+    public void setErrores(List<ErrorCompilacion> lex, List<ErrorCompilacion> sin,
+                           boolean sintacticoOmitido) {
         lexicos.datos = new ArrayList<>(lex);
+        lexicos.aviso = null;
         sintacticos.datos = new ArrayList<>(sin);
+        sintacticos.aviso = sintacticoOmitido
+                ? "análisis sintáctico no ejecutado: corrige primero los errores léxicos"
+                : null;
         lexicos.fireTableDataChanged();
         sintacticos.fireTableDataChanged();
         pestanias.setTitleAt(0, "Léxicos (" + lex.size() + ")");
-        pestanias.setTitleAt(1, "Sintácticos (" + sin.size() + ")");
+        pestanias.setTitleAt(1, sintacticoOmitido
+                ? "Sintácticos (omitido)"
+                : "Sintácticos (" + sin.size() + ")");
     }
 
     public int getFilasLexicas() { return lexicos.datos.size(); }
@@ -53,7 +69,7 @@ public class PanelErrores extends JPanel {
     private void instalarDobleClic(JTable tabla, Modelo modelo) {
         tabla.addMouseListener(new MouseAdapter() {
             public void mouseClicked(MouseEvent e) {
-                if (e.getClickCount() == 2) {
+                if (e.getClickCount() == 2 && !modelo.datos.isEmpty()) {
                     int fila = tabla.getSelectedRow();
                     if (fila >= 0) {
                         ErrorCompilacion err = modelo.datos.get(tabla.convertRowIndexToModel(fila));
@@ -67,12 +83,20 @@ public class PanelErrores extends JPanel {
     private static class Modelo extends AbstractTableModel {
         private final String[] cols = {"Ln:Col", "Mensaje"};
         private List<ErrorCompilacion> datos = new ArrayList<>();
+        /** Fila informativa que se muestra cuando no hay errores que listar. */
+        private String aviso;
 
-        public int getRowCount() { return datos.size(); }
+        public int getRowCount() {
+            return datos.isEmpty() && aviso != null ? 1 : datos.size();
+        }
+
         public int getColumnCount() { return cols.length; }
         public String getColumnName(int c) { return cols[c]; }
 
         public Object getValueAt(int r, int c) {
+            if (datos.isEmpty() && aviso != null) {
+                return c == 0 ? "" : aviso;
+            }
             ErrorCompilacion e = datos.get(r);
             return c == 0 ? e.linea() + ":" + e.columna() : e.mensaje();
         }

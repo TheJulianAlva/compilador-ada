@@ -3,7 +3,12 @@
 Cada archivo aísla **un tipo** de error léxico del subconjunto de Ada.
 Sirven para abrirlos en el IDE (menú **Archivo → Abrir…**), pulsar
 **Compilar (F5)** y comprobar que el panel **Errores → Léxicos** los
-lista todos, con línea y columna, separados de los sintácticos.
+lista todos, con línea y columna.
+
+Como todos estos archivos tienen errores léxicos, el análisis sintáctico
+**no se ejecuta** (fases secuenciales): la pestaña *Sintácticos* aparece
+como `(omitido)`. Para ver errores sintácticos, usa
+`../errores_sintacticos.ada`.
 
 El analizador léxico reconoce cinco clases de error, todas con
 recuperación (nunca aborta):
@@ -24,10 +29,9 @@ ni delimitadores válidos, de modo que `x $ y` sí produce tres tokens
 
 ## Resultado esperado por archivo
 
-Verificado contra `com.compiladorada.Compilador.analizar` (rama
-`feat/front-end-lexico-sintactico`). El número de errores sintácticos
-que acompaña es consecuencia de la recuperación en modo pánico y puede
-variar; lo que estos ejemplos fijan es la parte **léxica**.
+Verificado contra `com.compiladorada.Compilador.analizar`. En todos los
+casos el análisis sintáctico se omite (hay errores léxicos), así que la
+lista de errores sintácticos es siempre **0**.
 
 | Archivo | Errores léxicos esperados |
 |---|---|

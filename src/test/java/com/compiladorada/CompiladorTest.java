@@ -18,11 +18,25 @@ class CompiladorTest {
     }
 
     @Test
-    void separa_errores_lexicos_y_sintacticos() {
+    void con_errores_lexicos_no_se_ejecuta_el_analisis_sintactico() {
+        //  El '$' es un error léxico; además falta un ';'. Las fases son
+        //  secuenciales: al haber error léxico, el parser NO corre.
         ResultadoCompilacion r = Compilador.analizar(
                 "procedure P is X : Integer $ begin null end;", "p.ada");
         assertFalse(r.erroresLexicos().isEmpty());
+        assertTrue(r.erroresSintacticos().isEmpty(), "el análisis sintáctico no debía ejecutarse");
+        assertNull(r.ast());
+        assertTrue(r.sintacticoOmitido());
+    }
+
+    @Test
+    void sin_errores_lexicos_si_se_ejecuta_el_analisis_sintactico() {
+        //  Léxicamente limpio pero falta un ';': el parser sí corre y lo detecta.
+        ResultadoCompilacion r = Compilador.analizar(
+                "procedure P is X : Integer begin null; end;", "p.ada");
+        assertTrue(r.erroresLexicos().isEmpty());
         assertFalse(r.erroresSintacticos().isEmpty());
+        assertFalse(r.sintacticoOmitido());
     }
 
     @Test

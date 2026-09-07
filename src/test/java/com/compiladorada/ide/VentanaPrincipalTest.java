@@ -27,7 +27,20 @@ class VentanaPrincipalTest {
     }
 
     @Test
-    void compilar_programa_con_errores_los_separa(@TempDir Path dir) {
+    void compilar_programa_con_error_sintactico_lo_muestra(@TempDir Path dir) {
+        VentanaPrincipal v = new VentanaPrincipal();
+        v.setDirectorioSalida(dir);
+        // léxicamente limpio, falta un ';'
+        v.getEditor().setTexto("procedure P is X : Integer begin null; end;");
+
+        v.compilar();
+
+        assertEquals(0, v.getPanelErrores().getFilasLexicas());
+        assertTrue(v.getPanelErrores().getFilasSintacticas() > 0);
+    }
+
+    @Test
+    void con_errores_lexicos_omite_el_sintactico(@TempDir Path dir) throws Exception {
         VentanaPrincipal v = new VentanaPrincipal();
         v.setDirectorioSalida(dir);
         v.getEditor().setTexto("procedure P is X : Integer $ begin null end;");
@@ -35,7 +48,9 @@ class VentanaPrincipalTest {
         v.compilar();
 
         assertTrue(v.getPanelErrores().getFilasLexicas() > 0);
-        assertTrue(v.getPanelErrores().getFilasSintacticas() > 0);
+        assertEquals(0, v.getPanelErrores().getFilasSintacticas());
+        String sint = Files.readString(dir.resolve("errores_sintacticos.txt"));
+        assertTrue(sint.contains("OMITIDO"), "el archivo sintáctico debe indicar que se omitió: " + sint);
     }
 
     @Test

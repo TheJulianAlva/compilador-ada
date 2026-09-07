@@ -127,7 +127,7 @@ public class VentanaPrincipal extends JFrame {
         ResultadoCompilacion r = Compilador.analizar(fuente, nombre);
 
         tablaTokens.setTokens(r.tokens());
-        panelErrores.setErrores(r.erroresLexicos(), r.erroresSintacticos());
+        panelErrores.setErrores(r.erroresLexicos(), r.erroresSintacticos(), r.sintacticoOmitido());
 
         Path fuenteSinGuardar = null;
         try {
@@ -142,10 +142,14 @@ public class VentanaPrincipal extends JFrame {
             return;
         }
 
-        String mensaje = String.format(
-                "Compilado: %d léxicos, %d sintácticos — %s actualizado",
-                r.erroresLexicos().size(), r.erroresSintacticos().size(),
-                directorioSalida.toAbsolutePath());
+        String mensaje = r.sintacticoOmitido()
+                ? String.format(
+                    "Compilado: %d errores léxicos — análisis sintáctico omitido hasta corregirlos (%s)",
+                    r.erroresLexicos().size(), directorioSalida.toAbsolutePath())
+                : String.format(
+                    "Compilado: %d léxicos, %d sintácticos — %s actualizado",
+                    r.erroresLexicos().size(), r.erroresSintacticos().size(),
+                    directorioSalida.toAbsolutePath());
         if (fuenteSinGuardar != null) {
             mensaje += " (fuente sin guardar en " + fuenteSinGuardar.toAbsolutePath() + ")";
         }
