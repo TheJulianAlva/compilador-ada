@@ -47,9 +47,16 @@ distinto (los literales universales sí se adaptan al tipo de contexto).
 - `Compilador.analizar()` sigue secuencial: el análisis semántico solo corre
   si no hay errores léxicos **ni** sintácticos, siguiendo el mismo patrón que
   ya rige la transición léxico → sintáctico.
-- `Compilador` expone una forma de elegir qué driver corre (A o B) — necesario
-  para la comparación pedida y para que las pruebas corran ambos contra el
-  mismo caso.
+- **Decisión revisada tras la implementación**: `Compilador.analizar()` NO
+  expone un selector de driver en tiempo de ejecución — solo corre la
+  Implementación A (matching `docs/CLAUDE.md`'s dirección declarada). La
+  comparación entre A y B que pide la materia se demuestra en
+  `CasosSemanticosTest`, que corre AMBAS implementaciones contra el mismo
+  corpus `.ada`/`.expected` y exige que coincidan; no hace falta que la
+  comparación sea alcanzable desde el IDE para satisfacer el requisito
+  académico. Si una unidad futura necesita exponer B en el IDE (p. ej. para
+  comparar en vivo desde la interfaz), eso es una ampliación explícita, no
+  algo que este corte deje a medias.
 
 ## 2. Núcleo compartido
 

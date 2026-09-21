@@ -958,3 +958,37 @@ El IDE se prueba construyendo componentes Swing reales (no *mock*); la suite
   generación de código intermedio (representación tipo GENERIC/GIMPLE
   simplificada), la optimización (propagación de constantes, eliminación de
   código muerto) y la generación de NASM, sin volver a analizar el texto fuente.
+
+### 9.3 Limitaciones conocidas de la Unidad 1 (análisis semántico)
+
+- **Sin sentencia `return`.** La gramática no tiene todavía una producción
+  para `return <expresion>;` dentro de `sentencia()` — `KW_RETURN` solo
+  aparece en la firma de una `function`. Una función cuyo cuerpo intenta
+  `return` produce un error sintáctico, no uno semántico. El chequeo del
+  tipo de retorno de una función SÍ funciona en el punto de llamada (p. ej.
+  `C := F(1);` con `F` devolviendo `Integer` y `C : Character`).
+- **Sin subprogramas anidados.** `declaracion()` no acepta un
+  `procedure`/`function` dentro de la parte declarativa de otro subprograma
+  (solo `type`/`subtype`/variables) — es una limitación léxico-sintáctica
+  previa a esta unidad. Los casos de prueba que necesitan una función
+  auxiliar la declaran como unidad de compilación hermana en el mismo
+  archivo, no anidada.
+- **Sin evaluación estática de rangos.** Los límites de `range A..B` no se
+  evalúan como constantes; solo se verifica que ambos extremos sean de
+  tipos compatibles entre sí (`TipoAda.TipoRango` no guarda los valores
+  numéricos). No hay detección de `Constraint_Error` por rango en tiempo de
+  compilación.
+- **Posiciones de error distintas entre A y B.** La Implementación A reporta
+  en el token del operador (dispara durante el parseo); la Implementación B
+  reporta en el primer token de la subexpresión (calculado desde el AST).
+  Es una diferencia sistemática y esperada entre ambas — la comparación
+  automática en `CasosSemanticosTest` por diseño solo exige coincidencia en
+  línea, categoría y (desde la revisión final) mensaje, nunca columna.
+- **La comparación A/B vive en las pruebas, no en el IDE.** `Compilador`
+  solo ejecuta la Implementación A en producción; no hay selector de driver
+  expuesto. La demostración de que ambas implementaciones reportan los
+  mismos errores es `CasosSemanticosTest`, no una función del IDE — ver
+  `docs/superpowers/specs/2026-09-20-analisis-semantico-design.md` §1.
+- **Aridad de llamada sin paréntesis no verificada.** Una llamada a
+  procedimiento sin argumentos (`Foo;`) no valida que `Foo` en realidad
+  espere cero parámetros; solo la forma con paréntesis lo hace.
