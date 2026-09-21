@@ -4,7 +4,8 @@ public record ErrorCompilacion(Categoria categoria, int linea, int columna, Stri
 
     public enum Categoria {
         LEXICO("error léxico"),
-        SINTACTICO("error sintáctico");
+        SINTACTICO("error sintáctico"),
+        SEMANTICO("error semántico");
 
         private final String etiqueta;
 
