@@ -10,10 +10,11 @@ public record ResultadoCompilacion(
         List<TokenLexico> tokens,
         List<ErrorCompilacion> erroresLexicos,
         List<ErrorCompilacion> erroresSintacticos,
+        List<ErrorCompilacion> erroresSemanticos,
         SimpleNode ast) {
 
     public boolean tieneErrores() {
-        return !erroresLexicos.isEmpty() || !erroresSintacticos.isEmpty();
+        return !erroresLexicos.isEmpty() || !erroresSintacticos.isEmpty() || !erroresSemanticos.isEmpty();
     }
 
     /**
@@ -25,5 +26,14 @@ public record ResultadoCompilacion(
      */
     public boolean sintacticoOmitido() {
         return !erroresLexicos.isEmpty();
+    }
+
+    /**
+     * {@code true} si el análisis semántico NO se ejecutó por haber errores
+     * léxicos o sintácticos. Igual que {@link #sintacticoOmitido()}, las
+     * fases son secuenciales.
+     */
+    public boolean semanticoOmitido() {
+        return !erroresLexicos.isEmpty() || !erroresSintacticos.isEmpty();
     }
 }

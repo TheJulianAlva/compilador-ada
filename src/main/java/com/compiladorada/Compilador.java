@@ -24,9 +24,10 @@ public final class Compilador {
 
         // Fases secuenciales: el análisis sintáctico solo se ejecuta si la fase
         // léxica está limpia. Con errores léxicos se devuelve el resultado con la
-        // lista sintáctica vacía y sin AST (ver ResultadoCompilacion.sintacticoOmitido()).
+        // lista sintáctica y semántica vacías y sin AST (ver
+        // ResultadoCompilacion.sintacticoOmitido()/semanticoOmitido()).
         if (!lexico.errores().isEmpty()) {
-            return new ResultadoCompilacion(lexico.tokens(), lexico.errores(), List.of(), null);
+            return new ResultadoCompilacion(lexico.tokens(), lexico.errores(), List.of(), List.of(), null);
         }
 
         List<ErrorCompilacion> sintacticos = new ArrayList<>();
@@ -49,10 +50,20 @@ public final class Compilador {
                     "no se pudo construir el árbol sintáctico"));
         }
 
+        // Igual que con léxico -> sintáctico: el análisis semántico (embebido
+        // durante el parseo, ver AdaParser/Ada.jjt) solo cuenta si no hubo
+        // errores sintácticos — si el árbol quedó mal formado, sus errores
+        // "semánticos" serían ruido derivado de la recuperación de errores,
+        // no problemas reales del programa.
+        List<ErrorCompilacion> semanticos = sintacticos.isEmpty()
+                ? parser.getErroresSemanticos()
+                : List.of();
+
         return new ResultadoCompilacion(
                 lexico.tokens(),
                 lexico.errores(),
                 List.copyOf(sintacticos),
+                List.copyOf(semanticos),
                 ast);
     }
 }

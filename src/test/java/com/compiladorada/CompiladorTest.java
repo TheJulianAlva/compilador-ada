@@ -57,4 +57,21 @@ class CompiladorTest {
         ResultadoCompilacion r = Compilador.analizar("", "x.ada");
         assertTrue(r.tieneErrores());
     }
+
+    @Test
+    void expone_errores_semanticos_cuando_no_hay_errores_lexicos_ni_sintacticos() {
+        ResultadoCompilacion r = Compilador.analizar(
+                "procedure P is begin X := 1; end;", "t.ada");
+        assertTrue(r.erroresLexicos().isEmpty());
+        assertTrue(r.erroresSintacticos().isEmpty());
+        assertFalse(r.erroresSemanticos().isEmpty());
+    }
+
+    @Test
+    void no_corre_el_semantico_si_hay_errores_sintacticos() {
+        ResultadoCompilacion r = Compilador.analizar(
+                "procedure P is begin X := ; end;", "t.ada");
+        assertFalse(r.erroresSintacticos().isEmpty());
+        assertTrue(r.erroresSemanticos().isEmpty());
+    }
 }

@@ -35,14 +35,14 @@ class ModeloDatosTest {
 
     @Test
     void resultado_sin_errores_no_tiene_errores() {
-        ResultadoCompilacion r = new ResultadoCompilacion(List.of(), List.of(), List.of(), null);
+        ResultadoCompilacion r = new ResultadoCompilacion(List.of(), List.of(), List.of(), List.of(), null);
         assertFalse(r.tieneErrores());
     }
 
     @Test
     void resultado_con_error_sintactico_tiene_errores() {
         ErrorCompilacion e = new ErrorCompilacion(Categoria.SINTACTICO, 1, 1, "x");
-        ResultadoCompilacion r = new ResultadoCompilacion(List.of(), List.of(), List.of(e), null);
+        ResultadoCompilacion r = new ResultadoCompilacion(List.of(), List.of(), List.of(e), List.of(), null);
         assertTrue(r.tieneErrores());
     }
 }
