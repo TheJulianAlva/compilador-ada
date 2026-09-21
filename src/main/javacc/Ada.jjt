@@ -18,6 +18,7 @@ import com.compiladorada.semantico.VerificadorSemantico;
 import com.compiladorada.semantico.NombreAst;
 import com.compiladorada.semantico.DeclaracionVarAst;
 import com.compiladorada.semantico.DeclaracionTipoAst;
+import com.compiladorada.semantico.ComponenteRegistroAst;
 import com.compiladorada.semantico.LiteralAst;
 import com.compiladorada.semantico.FuncionAst;
 
@@ -479,7 +480,7 @@ void declaracionVar() #DeclaracionVar :
 void declaracionTipo() #DeclaracionTipo :
 { Token t; TipoAda tipo; }
 {
-    t=<IDENTIFICADOR> <KW_IS> tipo=definicionTipo() ";"
+    t=<IDENTIFICADOR> <KW_IS> tipo=definicionTipo(t.image) ";"
     {
         jjtThis.jjtSetValue(new DeclaracionTipoAst(t.image, tipo, t.beginLine, t.beginColumn));
         verificador.declararTipo(t.image, tipo, t.beginLine, t.beginColumn);
@@ -497,29 +498,47 @@ void declaracionSubtipo() #DeclaracionSubtipo :
     }
 }
 
-TipoAda definicionTipo() #DefinicionTipo :
+TipoAda definicionTipo(String nombreDeclarado) #DefinicionTipo :
 {
     Token t;
+    Token primerToken;
     TipoAda componente;
     java.util.LinkedHashMap<String, TipoAda> campos;
     java.util.List<String> literales;
 }
 {
     <KW_RANGE> rango()
-    { return new TipoAda.TipoRango("<rango>"); }
+    {
+        TipoAda.TipoRango resultado = new TipoAda.TipoRango(nombreDeclarado);
+        jjtThis.jjtSetValue(resultado);
+        return resultado;
+    }
   |
-    "(" t=<IDENTIFICADOR> { literales = new java.util.ArrayList<String>(); literales.add(t.image); }
+    "(" t=<IDENTIFICADOR> { literales = new java.util.ArrayList<String>(); literales.add(t.image); primerToken = t; }
         ( "," t=<IDENTIFICADOR> { literales.add(t.image); } )* ")"
-    { return new TipoAda.TipoEnumerado("<enumerado>", literales); }
+    {
+        TipoAda.TipoEnumerado tipoEnumerado = new TipoAda.TipoEnumerado(nombreDeclarado, literales);
+        // Los literales de un enumerado son constantes de ese tipo (p. ej.
+        // Rojo, Verde en "type Color is (Rojo, Verde)"); si no se declaran
+        // aquí, cualquier uso posterior ("C := Rojo;") falsamente reporta
+        // "Rojo no está declarado" pese a ser Ada válido.
+        verificador.declararVariables(literales, tipoEnumerado, true,
+                primerToken.beginLine, primerToken.beginColumn);
+        return tipoEnumerado;
+    }
   |
     <KW_RECORD>
     { campos = new java.util.LinkedHashMap<String, TipoAda>(); }
     ( componenteRegistro(campos) )*
     <KW_END> <KW_RECORD>
-    { return new TipoAda.TipoRegistro("<registro>", campos); }
+    { return new TipoAda.TipoRegistro(nombreDeclarado, campos); }
   |
     <KW_ARRAY> "(" rango() ")" <KW_OF> componente=tipoRef()
-    { return new TipoAda.TipoArreglo("<arreglo>", componente); }
+    {
+        TipoAda.TipoArreglo resultado = new TipoAda.TipoArreglo(nombreDeclarado, componente);
+        jjtThis.jjtSetValue(resultado);
+        return resultado;
+    }
 }
 
 void componenteRegistro(java.util.Map<String, TipoAda> campos) #ComponenteRegistro :
@@ -537,6 +556,7 @@ void componenteRegistro(java.util.Map<String, TipoAda> campos) #ComponenteRegist
         for (String n : nombres) {
             campos.put(n.toLowerCase(java.util.Locale.ROOT), tipo);
         }
+        jjtThis.jjtSetValue(new ComponenteRegistroAst(tipo, t.beginLine, t.beginColumn));
     }
     ( ":=" tipoInicial=expresion()
         { verificador.verificarInicializacion(tipo, tipoInicial, t.beginLine, t.beginColumn); }

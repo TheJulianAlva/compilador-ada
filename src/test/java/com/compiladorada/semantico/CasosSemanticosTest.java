@@ -14,6 +14,7 @@ import java.io.IOException;
 import java.io.StringReader;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Stream;
 
@@ -89,7 +90,32 @@ class CasosSemanticosTest {
 
                     List<ErrorCompilacion> deB = conB(fuente);
                     assertCoincideConEsperado(esperados, deB, p.getFileName() + " (B)");
+
+                    assertMismoTextoDeMensajes(r.erroresSemanticos(), deB, p.getFileName().toString());
                 }));
+    }
+
+    // Más allá de coincidir con el .expected (que solo exige linea+categoria),
+    // en todos los casos explorados A y B producen mensajes byte-idénticos
+    // para el mismo error lógico — un invariante real que vale la pena
+    // proteger. A y B pueden reportar el mismo conjunto de errores en ORDEN
+    // distinto (difieren en qué recorren primero), así que ambas listas se
+    // ordenan por (linea, mensaje) antes de comparar mensaje a mensaje —
+    // de lo contrario esta aserción dependería espuriamente del orden.
+    private void assertMismoTextoDeMensajes(List<ErrorCompilacion> erroresA, List<ErrorCompilacion> erroresB,
+                                             String etiqueta) {
+        assertEquals(erroresA.size(), erroresB.size(),
+                () -> "cantidad de errores distinta entre A y B en " + etiqueta
+                        + "; A=" + erroresA + " B=" + erroresB);
+        Comparator<ErrorCompilacion> orden = Comparator.comparingInt(ErrorCompilacion::linea)
+                .thenComparing(ErrorCompilacion::mensaje);
+        List<ErrorCompilacion> ordenadosA = erroresA.stream().sorted(orden).toList();
+        List<ErrorCompilacion> ordenadosB = erroresB.stream().sorted(orden).toList();
+        for (int i = 0; i < ordenadosA.size(); i++) {
+            assertEquals(ordenadosA.get(i).mensaje(), ordenadosB.get(i).mensaje(),
+                    () -> "mensaje distinto entre A y B en " + etiqueta
+                            + "; A=" + ordenadosA + " B=" + ordenadosB);
+        }
     }
 
     // A ancla los errores dentro de una expresión binaria/condición en el

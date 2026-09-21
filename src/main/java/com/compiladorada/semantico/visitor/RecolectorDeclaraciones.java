@@ -82,7 +82,18 @@ public final class RecolectorDeclaraciones extends AdaParserDefaultVisitor {
 
     @Override
     public Object visit(ASTProcedimiento node, Object data) {
-        declararSubprogramaYAbrirAmbito(node, (NombreAst) node.jjtGetValue(), null, data);
+        // node.jjtGetValue() puede ser null: Ada.jjt#unidadNoReconocida()
+        // (recuperación de errores sintácticos) reutiliza el nodo #Procedimiento
+        // pero nunca llama jjtSetValue sobre él. Sin esta guarda, un archivo con
+        // ese tipo de error sintáctico provoca un NullPointerException aquí y
+        // pierde TODAS las declaraciones del resto del programa, no solo las de
+        // esta unidad mal formada.
+        NombreAst info = (NombreAst) node.jjtGetValue();
+        if (info == null) {
+            node.childrenAccept(this, data);
+            return data;
+        }
+        declararSubprogramaYAbrirAmbito(node, info, null, data);
         return data;
     }
 
@@ -96,6 +107,10 @@ public final class RecolectorDeclaraciones extends AdaParserDefaultVisitor {
         // correctamente en la Pasada 2 — usar TipoAda.DESCONOCIDO como
         // marcador habría vuelto compatible cualquier consumo del resultado.
         FuncionAst info = (FuncionAst) node.jjtGetValue();
+        if (info == null) {
+            node.childrenAccept(this, data);
+            return data;
+        }
         NombreAst nombre = new NombreAst(info.nombre(), info.linea(), info.columna(), List.of());
         declararSubprogramaYAbrirAmbito(node, nombre, info.retorno(), data);
         return data;
@@ -104,6 +119,10 @@ public final class RecolectorDeclaraciones extends AdaParserDefaultVisitor {
     @Override
     public Object visit(ASTPaquete node, Object data) {
         NombreAst info = (NombreAst) node.jjtGetValue();
+        if (info == null) {
+            node.childrenAccept(this, data);
+            return data;
+        }
         verificador.declararPaquete(info.base(), info.linea(), info.columna());
         Ambito ambito = verificador.entrarAmbito();
         ambitosPorNodo.put(node, ambito);
@@ -115,6 +134,10 @@ public final class RecolectorDeclaraciones extends AdaParserDefaultVisitor {
     @Override
     public Object visit(ASTDeclaracionVar node, Object data) {
         DeclaracionVarAst info = (DeclaracionVarAst) node.jjtGetValue();
+        if (info == null) {
+            node.childrenAccept(this, data);
+            return data;
+        }
         verificador.declararVariables(info.nombres(), info.tipo(), info.esConstante(),
                 info.linea(), info.columna());
         return data;
@@ -123,13 +146,31 @@ public final class RecolectorDeclaraciones extends AdaParserDefaultVisitor {
     @Override
     public Object visit(ASTDeclaracionTipo node, Object data) {
         DeclaracionTipoAst info = (DeclaracionTipoAst) node.jjtGetValue();
+        if (info == null) {
+            node.childrenAccept(this, data);
+            return data;
+        }
         verificador.declararTipo(info.nombre(), info.tipo(), info.linea(), info.columna());
+        // Los literales de un tipo enumerado (Ada.jjt#definicionTipo(), rama
+        // "(" ... ")") son constantes de ese tipo. Implementación A los
+        // declara ahí mismo, durante el parseo; Implementación B usa su
+        // PROPIO VerificadorSemantico (no el de A), así que tiene que
+        // repetir esa declaración aquí, en la Pasada 1, para que la Pasada 2
+        // pueda resolver usos como "C := Rojo;".
+        if (info.tipo() instanceof TipoAda.TipoEnumerado enumerado) {
+            verificador.declararVariables(enumerado.literales(), enumerado, true,
+                    info.linea(), info.columna());
+        }
         return data;
     }
 
     @Override
     public Object visit(ASTDeclaracionSubtipo node, Object data) {
         DeclaracionTipoAst info = (DeclaracionTipoAst) node.jjtGetValue();
+        if (info == null) {
+            node.childrenAccept(this, data);
+            return data;
+        }
         verificador.declararTipo(info.nombre(), info.tipo(), info.linea(), info.columna());
         return data;
     }
@@ -137,6 +178,10 @@ public final class RecolectorDeclaraciones extends AdaParserDefaultVisitor {
     @Override
     public Object visit(ASTFor node, Object data) {
         DeclaracionVarAst info = (DeclaracionVarAst) node.jjtGetValue();
+        if (info == null) {
+            node.childrenAccept(this, data);
+            return data;
+        }
         Ambito ambito = verificador.entrarAmbito();
         ambitosPorNodo.put(node, ambito);
         verificador.declararVariables(info.nombres(), info.tipo(), info.esConstante(),

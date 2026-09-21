@@ -1,6 +1,8 @@
 package com.compiladorada.semantico.visitor;
 
 import com.compiladorada.semantico.Ambito;
+import com.compiladorada.semantico.ComponenteRegistroAst;
+import com.compiladorada.semantico.DeclaracionTipoAst;
 import com.compiladorada.semantico.DeclaracionVarAst;
 import com.compiladorada.semantico.NombreAst;
 import com.compiladorada.semantico.Simbolo;
@@ -48,7 +50,18 @@ public final class VerificadorUsos extends AdaParserDefaultVisitor {
 
     @Override
     public Object visit(ASTProcedimiento node, Object data) {
-        verificador.entrarAmbitoExistente(ambitosPorNodo.get(node));
+        // ambitosPorNodo no tiene entrada para este nodo cuando
+        // RecolectorDeclaraciones (Pasada 1) se topó con un valor null aquí
+        // (Ada.jjt#unidadNoReconocida(), recuperación de errores) y por eso
+        // no abrió ámbito para él — entrarAmbitoExistente(null) dejaría
+        // `actual` en null y reventaría en el próximo salirAmbito(). En ese
+        // caso simplemente se recorre sin cambiar de ámbito.
+        Ambito ambito = ambitosPorNodo.get(node);
+        if (ambito == null) {
+            node.childrenAccept(this, data);
+            return data;
+        }
+        verificador.entrarAmbitoExistente(ambito);
         node.childrenAccept(this, data);
         verificador.salirAmbito();
         return data;
@@ -56,7 +69,12 @@ public final class VerificadorUsos extends AdaParserDefaultVisitor {
 
     @Override
     public Object visit(ASTFuncion node, Object data) {
-        verificador.entrarAmbitoExistente(ambitosPorNodo.get(node));
+        Ambito ambito = ambitosPorNodo.get(node);
+        if (ambito == null) {
+            node.childrenAccept(this, data);
+            return data;
+        }
+        verificador.entrarAmbitoExistente(ambito);
         node.childrenAccept(this, data);
         verificador.salirAmbito();
         return data;
@@ -64,7 +82,12 @@ public final class VerificadorUsos extends AdaParserDefaultVisitor {
 
     @Override
     public Object visit(ASTPaquete node, Object data) {
-        verificador.entrarAmbitoExistente(ambitosPorNodo.get(node));
+        Ambito ambito = ambitosPorNodo.get(node);
+        if (ambito == null) {
+            node.childrenAccept(this, data);
+            return data;
+        }
+        verificador.entrarAmbitoExistente(ambito);
         node.childrenAccept(this, data);
         verificador.salirAmbito();
         return data;
@@ -94,6 +117,10 @@ public final class VerificadorUsos extends AdaParserDefaultVisitor {
     @Override
     public Object visit(ASTDeclaracionVar node, Object data) {
         DeclaracionVarAst info = (DeclaracionVarAst) node.jjtGetValue();
+        if (info == null) {
+            node.childrenAccept(this, data);
+            return data;
+        }
         // El único hijo posible es el inicializador opcional.
         if (node.jjtGetNumChildren() > 0) {
             TipoAda origen = tipo(node.jjtGetChild(0), data);
@@ -108,6 +135,10 @@ public final class VerificadorUsos extends AdaParserDefaultVisitor {
         // colapsó a un Nombre/Literal directo, puede ser Expresion/Simple/...).
         SimpleNode nombreDestino = (SimpleNode) node.jjtGetChild(0);
         NombreAst destinoInfo = (NombreAst) nombreDestino.jjtGetValue();
+        if (destinoInfo == null) {
+            node.childrenAccept(this, data);
+            return data;
+        }
         Simbolo destino = verificador.resolverUsoConOrden(destinoInfo.base(),
                 destinoInfo.linea(), destinoInfo.columna());
         TipoAda tipoDestino = resolverCadena(destino != null ? destino.tipo() : TipoAda.DESCONOCIDO,
@@ -121,6 +152,67 @@ public final class VerificadorUsos extends AdaParserDefaultVisitor {
     @Override
     public Object visit(ASTLlamadaProc node, Object data) {
         tipo(node.jjtGetChild(0), data);
+        return data;
+    }
+
+    @Override
+    public Object visit(ASTComponenteRegistro node, Object data) {
+        // Espejo de Ada.jjt#componenteRegistro(): el único hijo posible es
+        // el inicializador opcional del campo ("X : Integer := 'a';"). Sin
+        // este visit, el defaultVisit heredado tipa la expresión (bajando
+        // recursivamente) pero nunca compara ese tipo contra el declarado
+        // del campo — el mismatch quedaba silenciosamente sin reportar.
+        ComponenteRegistroAst info = (ComponenteRegistroAst) node.jjtGetValue();
+        if (info == null) {
+            node.childrenAccept(this, data);
+            return data;
+        }
+        if (node.jjtGetNumChildren() > 0) {
+            TipoAda origen = tipo(node.jjtGetChild(0), data);
+            verificador.verificarInicializacion(info.tipo(), origen, info.linea(), info.columna());
+        }
+        return data;
+    }
+
+    @Override
+    public Object visit(ASTDeclaracionSubtipo node, Object data) {
+        // Ada.jjt#declaracionSubtipo(): "( <KW_RANGE> rango() )?" — rango()
+        // no tiene nodo propio (#Rango), así que sus dos expresion() de
+        // límite, cuando el "range ..." está presente, burbujean como los
+        // dos únicos hijos directos de #DeclaracionSubtipo. Implementación A
+        // ya llama tipoDeRango dentro de rango() al parsear; aquí hay que
+        // reproducir ese chequeo explícitamente.
+        if (node.jjtGetNumChildren() > 0) {
+            DeclaracionTipoAst info = (DeclaracionTipoAst) node.jjtGetValue();
+            TipoAda inf = tipo(node.jjtGetChild(0), data);
+            TipoAda sup = tipo(node.jjtGetChild(1), data);
+            int linea = info != null ? info.linea() : node.jjtGetFirstToken().beginLine;
+            int columna = info != null ? info.columna() : node.jjtGetFirstToken().beginColumn;
+            verificador.tipoDeRango(inf, sup, linea, columna);
+        }
+        return data;
+    }
+
+    @Override
+    public Object visit(ASTDefinicionTipo node, Object data) {
+        // Ada.jjt#definicionTipo(): las ramas "range ..." y "array (...) of
+        // ..." llaman rango(), que tampoco tiene nodo propio — sus dos
+        // expresion() de límite burbujean como los dos hijos directos de
+        // #DefinicionTipo. La rama enumerado no tiene hijos (los literales
+        // son tokens sueltos, no expresiones) y la rama record delega sus
+        // #ComponenteRegistro hijos al visit de arriba, así que basta
+        // distinguir por el tipo ya calculado (guardado en el nodo solo para
+        // esas dos ramas) y, si no aplica, recorrer normalmente.
+        Object valor = node.jjtGetValue();
+        if ((valor instanceof TipoAda.TipoRango || valor instanceof TipoAda.TipoArreglo)
+                && node.jjtGetNumChildren() >= 2) {
+            TipoAda inf = tipo(node.jjtGetChild(0), data);
+            TipoAda sup = tipo(node.jjtGetChild(1), data);
+            verificador.tipoDeRango(inf, sup, node.jjtGetFirstToken().beginLine,
+                    node.jjtGetFirstToken().beginColumn);
+            return data;
+        }
+        node.childrenAccept(this, data);
         return data;
     }
 
@@ -185,6 +277,9 @@ public final class VerificadorUsos extends AdaParserDefaultVisitor {
     @Override
     public Object visit(ASTNombre node, Object data) {
         NombreAst info = (NombreAst) node.jjtGetValue();
+        if (info == null) {
+            return TipoAda.DESCONOCIDO;
+        }
         Simbolo base = verificador.resolverUsoConOrden(info.base(), info.linea(), info.columna());
         TipoAda tipo = base != null ? base.tipo() : TipoAda.DESCONOCIDO;
         return resolverCadena(tipo, info, base, data, node);
