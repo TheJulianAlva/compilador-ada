@@ -362,4 +362,12 @@ public final class VerificadorSemantico {
      * una prueba de pertenencia ({@code in}/{@code not in}). */
     public record RelacionOp(String comparador, boolean pertenencia, boolean negada) {
     }
+
+    /** Info cruda de un grupo de parámetros ("A, B : in Integer") antes de
+     * declararlos — se calcula ANTES de entrar al ámbito del subprograma
+     * (para conocer los tipos y poder declarar la firma del subprograma en
+     * el ámbito EXTERNO), y se declara cada nombre DESPUÉS de entrar (ver
+     * Ada.jjt#procedimiento()/funcion()). */
+    public record ParametroInfo(List<String> nombres, TipoAda tipo, boolean modoOut) {
+    }
 }

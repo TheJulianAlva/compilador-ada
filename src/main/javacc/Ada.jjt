@@ -12,6 +12,10 @@ PARSER_BEGIN(AdaParser)
 package com.compiladorada.generado;
 
 import com.compiladorada.sintactico.nodos.SimpleNode;
+import com.compiladorada.semantico.TipoAda;
+import com.compiladorada.semantico.Simbolo;
+import com.compiladorada.semantico.VerificadorSemantico;
+import com.compiladorada.semantico.NombreAst;
 
 public class AdaParser {
 
@@ -21,6 +25,13 @@ public class AdaParser {
 
     public java.util.List<com.compiladorada.errores.ErrorCompilacion> getErroresSintacticos() {
         return erroresSintacticos;
+    }
+
+    private final com.compiladorada.semantico.VerificadorSemantico verificador =
+            new com.compiladorada.semantico.VerificadorSemantico();
+
+    public java.util.List<com.compiladorada.errores.ErrorCompilacion> getErroresSemanticos() {
+        return verificador.errores();
     }
 
     private int ultLinea = -1;
@@ -263,8 +274,10 @@ void unidadCompilacion() : {}
     asumiendo que se quiso declarar un procedimiento con la palabra clave mal
     escrita (el caso típico), descartamos solo ese token y seguimos analizando el
     resto como su cuerpo, para no perder los demás errores del archivo. */
-void unidadNoReconocida() #Procedimiento : {}
+void unidadNoReconocida() #Procedimiento :
+{ int prof; }
 {
+    { prof = verificador.profundidad(); }
     {
         Token ofensor = getToken(1);
         erroresSintacticos.add(new com.compiladorada.errores.ErrorCompilacion(
@@ -272,6 +285,7 @@ void unidadNoReconocida() #Procedimiento : {}
                 ofensor.beginLine, ofensor.beginColumn,
                 com.compiladorada.sintactico.TraductorMensajes.esperadoUnidad(ofensor.image)));
         getNextToken();
+        verificador.entrarAmbito();
     }
     try {
         <IDENTIFICADOR> ( "(" parametros() ")" )? <KW_IS>
@@ -283,13 +297,38 @@ void unidadNoReconocida() #Procedimiento : {}
     } catch (ParseException e) {
         registrar(e);
         sincronizar(KW_PROCEDURE, KW_FUNCTION, KW_PACKAGE);
+    } finally {
+        verificador.salirHasta(prof);
     }
 }
 
-void procedimiento() #Procedimiento : {}
+void procedimiento() #Procedimiento :
 {
+    Token nombreTok;
+    java.util.List<VerificadorSemantico.ParametroInfo> parametros = java.util.List.of();
+    int prof;
+}
+{
+    { prof = verificador.profundidad(); }
     try {
-        <KW_PROCEDURE> <IDENTIFICADOR> ( "(" parametros() ")" )? <KW_IS>
+        <KW_PROCEDURE> nombreTok=<IDENTIFICADOR>
+        ( "(" parametros=parametros() ")" )?
+        {
+            java.util.List<TipoAda> tiposParam = new java.util.ArrayList<TipoAda>();
+            for (VerificadorSemantico.ParametroInfo p : parametros) {
+                for (String n : p.nombres()) { tiposParam.add(p.tipo()); }
+            }
+            verificador.declararSubprograma(nombreTok.image, tiposParam, null,
+                    nombreTok.beginLine, nombreTok.beginColumn);
+            verificador.entrarAmbito();
+            for (VerificadorSemantico.ParametroInfo p : parametros) {
+                for (String n : p.nombres()) {
+                    verificador.declararParametro(n, p.tipo(), p.modoOut(),
+                            nombreTok.beginLine, nombreTok.beginColumn);
+                }
+            }
+        }
+        <KW_IS>
             ( declaracion() )*
         <KW_BEGIN>
             ( sentencia() )*
@@ -298,13 +337,40 @@ void procedimiento() #Procedimiento : {}
     } catch (ParseException e) {
         registrar(e);
         sincronizar(KW_PROCEDURE, KW_FUNCTION, KW_PACKAGE);
+    } finally {
+        verificador.salirHasta(prof);
     }
 }
 
-void funcion() #Funcion : {}
+void funcion() #Funcion :
 {
+    Token nombreTok;
+    java.util.List<VerificadorSemantico.ParametroInfo> parametros = java.util.List.of();
+    TipoAda tipoRetorno;
+    int prof;
+}
+{
+    { prof = verificador.profundidad(); }
     try {
-        <KW_FUNCTION> <IDENTIFICADOR> ( "(" parametros() ")" )? <KW_RETURN> tipoRef() <KW_IS>
+        <KW_FUNCTION> nombreTok=<IDENTIFICADOR>
+        ( "(" parametros=parametros() ")" )?
+        <KW_RETURN> tipoRetorno=tipoRef()
+        {
+            java.util.List<TipoAda> tiposParam = new java.util.ArrayList<TipoAda>();
+            for (VerificadorSemantico.ParametroInfo p : parametros) {
+                for (String n : p.nombres()) { tiposParam.add(p.tipo()); }
+            }
+            verificador.declararSubprograma(nombreTok.image, tiposParam, tipoRetorno,
+                    nombreTok.beginLine, nombreTok.beginColumn);
+            verificador.entrarAmbito();
+            for (VerificadorSemantico.ParametroInfo p : parametros) {
+                for (String n : p.nombres()) {
+                    verificador.declararParametro(n, p.tipo(), p.modoOut(),
+                            nombreTok.beginLine, nombreTok.beginColumn);
+                }
+            }
+        }
+        <KW_IS>
             ( declaracion() )*
         <KW_BEGIN>
             ( sentencia() )*
@@ -313,25 +379,47 @@ void funcion() #Funcion : {}
     } catch (ParseException e) {
         registrar(e);
         sincronizar(KW_PROCEDURE, KW_FUNCTION, KW_PACKAGE);
+    } finally {
+        verificador.salirHasta(prof);
     }
 }
 
-void parametros() : {}
+java.util.List<VerificadorSemantico.ParametroInfo> parametros() :
 {
-    parametro() ( ";" parametro() )*
+    java.util.List<VerificadorSemantico.ParametroInfo> lista =
+            new java.util.ArrayList<VerificadorSemantico.ParametroInfo>();
+    VerificadorSemantico.ParametroInfo p;
+}
+{
+    p=parametro() { lista.add(p); } ( ";" p=parametro() { lista.add(p); } )*
+    { return lista; }
 }
 
-void parametro() #Parametro : {}
+VerificadorSemantico.ParametroInfo parametro() #Parametro :
 {
-    <IDENTIFICADOR> ( "," <IDENTIFICADOR> )* ":"
-    ( LOOKAHEAD(2) <KW_IN> <KW_OUT> | <KW_IN> | <KW_OUT> )?
-    tipoRef()
+    java.util.List<String> nombres = new java.util.ArrayList<String>();
+    Token t;
+    boolean modoOut = false;
+    TipoAda tipo;
+}
+{
+    t=<IDENTIFICADOR> { nombres.add(t.image); }
+    ( "," t=<IDENTIFICADOR> { nombres.add(t.image); } )*
+    ":"
+    ( LOOKAHEAD(2) <KW_IN> <KW_OUT> { modoOut = true; }
+    | <KW_IN>
+    | <KW_OUT> { modoOut = true; }
+    )?
+    tipo=tipoRef()
+    { return new VerificadorSemantico.ParametroInfo(nombres, tipo, modoOut); }
 }
 
 /* Referencia a un tipo por nombre. */
-void tipoRef() : {}
+TipoAda tipoRef() :
+{ Token t; }
 {
-    <IDENTIFICADOR>
+    t=<IDENTIFICADOR>
+    { return verificador.tipoDeclarado(t.image, t.beginLine, t.beginColumn); }
 }
 
 void declaracion() : {}
@@ -349,44 +437,143 @@ void declaracion() : {}
     }
 }
 
-void declaracionTipo() #DeclaracionTipo : {}
+void declaracionVar() #DeclaracionVar :
 {
-    <IDENTIFICADOR> <KW_IS> definicionTipo() ";"
+    java.util.List<String> nombres = new java.util.ArrayList<String>();
+    Token inicio;
+    Token t;
+    boolean esConstante = false;
+    TipoAda tipo;
+    TipoAda tipoInicial;
+}
+{
+    t=<IDENTIFICADOR> { inicio = t; nombres.add(t.image); }
+    ( "," t=<IDENTIFICADOR> { nombres.add(t.image); } )*
+    ":" ( <KW_CONSTANT> { esConstante = true; } )?
+    tipo=tipoRef()
+    {
+        verificador.declararVariables(nombres, tipo, esConstante,
+                inicio.beginLine, inicio.beginColumn);
+    }
+    ( ":=" tipoInicial=expresion()
+        { verificador.verificarInicializacion(tipo, tipoInicial, inicio.beginLine, inicio.beginColumn); }
+    )?
+    ";"
 }
 
-void declaracionSubtipo() #DeclaracionSubtipo : {}
+void declaracionTipo() #DeclaracionTipo :
+{ Token t; TipoAda tipo; }
 {
-    <IDENTIFICADOR> <KW_IS> <IDENTIFICADOR> ( <KW_RANGE> rango() )? ";"
+    t=<IDENTIFICADOR> <KW_IS> tipo=definicionTipo() ";"
+    { verificador.declararTipo(t.image, tipo, t.beginLine, t.beginColumn); }
 }
 
-void definicionTipo() #DefinicionTipo : {}
+void declaracionSubtipo() #DeclaracionSubtipo :
+{ Token t; TipoAda base; }
+{
+    t=<IDENTIFICADOR> <KW_IS> base=tipoRef() ( <KW_RANGE> rango() )? ";"
+    {
+        verificador.declararTipo(t.image, new TipoAda.TipoSubtipo(t.image, base),
+                t.beginLine, t.beginColumn);
+    }
+}
+
+TipoAda definicionTipo() #DefinicionTipo :
+{
+    Token t;
+    TipoAda componente;
+    java.util.LinkedHashMap<String, TipoAda> campos;
+    java.util.List<String> literales;
+}
 {
     <KW_RANGE> rango()
-  | "(" <IDENTIFICADOR> ( "," <IDENTIFICADOR> )* ")"
-  | <KW_RECORD> ( componenteRegistro() )* <KW_END> <KW_RECORD>
-  | <KW_ARRAY> "(" rango() ")" <KW_OF> tipoRef()
+    { return new TipoAda.TipoRango("<rango>"); }
+  |
+    "(" t=<IDENTIFICADOR> { literales = new java.util.ArrayList<String>(); literales.add(t.image); }
+        ( "," t=<IDENTIFICADOR> { literales.add(t.image); } )* ")"
+    { return new TipoAda.TipoEnumerado("<enumerado>", literales); }
+  |
+    <KW_RECORD>
+    { campos = new java.util.LinkedHashMap<String, TipoAda>(); }
+    ( componenteRegistro(campos) )*
+    <KW_END> <KW_RECORD>
+    { return new TipoAda.TipoRegistro("<registro>", campos); }
+  |
+    <KW_ARRAY> "(" rango() ")" <KW_OF> componente=tipoRef()
+    { return new TipoAda.TipoArreglo("<arreglo>", componente); }
 }
 
-void componenteRegistro() #ComponenteRegistro : {}
+void componenteRegistro(java.util.Map<String, TipoAda> campos) #ComponenteRegistro :
 {
-    <IDENTIFICADOR> ( "," <IDENTIFICADOR> )* ":" tipoRef() ( ":=" expresion() )? ";"
+    java.util.List<String> nombres = new java.util.ArrayList<String>();
+    Token t;
+    TipoAda tipo;
+    TipoAda tipoInicial;
 }
-
-void declaracionVar() #DeclaracionVar : {}
 {
-    <IDENTIFICADOR> ( "," <IDENTIFICADOR> )* ":" ( <KW_CONSTANT> )? tipoRef()
-    ( ":=" expresion() )? ";"
+    t=<IDENTIFICADOR> { nombres.add(t.image); }
+    ( "," t=<IDENTIFICADOR> { nombres.add(t.image); } )*
+    ":" tipo=tipoRef()
+    {
+        for (String n : nombres) {
+            campos.put(n.toLowerCase(java.util.Locale.ROOT), tipo);
+        }
+    }
+    ( ":=" tipoInicial=expresion()
+        { verificador.verificarInicializacion(tipo, tipoInicial, t.beginLine, t.beginColumn); }
+    )?
+    ";"
 }
 
 /* Nombre: identificador con indexación y calificación encadenadas
    (p. ej. A(I), R.Campo, Ada.Text_IO.Put_Line). */
-void nombre() : {}
+VerificadorSemantico.NombreResuelto nombre() #Nombre :
 {
-    <IDENTIFICADOR>
+    Token base;
+    Simbolo simboloBase;
+    TipoAda tipo;
+    java.util.List<TipoAda> argumentos;
+    Token campo;
+    boolean esPrimero = true;
+    java.util.List<NombreAst.Segmento> segmentos = new java.util.ArrayList<NombreAst.Segmento>();
+}
+{
+    base=<IDENTIFICADOR>
+    {
+        simboloBase = verificador.resolverUso(base.image, base.beginLine, base.beginColumn);
+        tipo = simboloBase != null ? simboloBase.tipo() : TipoAda.DESCONOCIDO;
+    }
     (
-        "(" expresion() ( "," expresion() )* ")"
-      | "." <IDENTIFICADOR>
+        "(" argumentos=argumentosExpresion() ")"
+            {
+                tipo = verificador.tipoDeLlamadaOIndexacion(
+                        esPrimero ? simboloBase : null, tipo, argumentos,
+                        base.beginLine, base.beginColumn);
+                segmentos.add(new NombreAst.Segmento.Indexacion(
+                        argumentos.size(), base.beginLine, base.beginColumn));
+                esPrimero = false;
+            }
+      | "." campo=<IDENTIFICADOR>
+            {
+                tipo = verificador.tipoDeCampo(tipo, campo.image, campo.beginLine, campo.beginColumn);
+                segmentos.add(new NombreAst.Segmento.Campo(campo.image, campo.beginLine, campo.beginColumn));
+                esPrimero = false;
+            }
     )*
+    {
+        jjtThis.jjtSetValue(new NombreAst(base.image, base.beginLine, base.beginColumn, segmentos));
+        return new VerificadorSemantico.NombreResuelto(tipo, simboloBase);
+    }
+}
+
+java.util.List<TipoAda> argumentosExpresion() :
+{
+    java.util.List<TipoAda> lista = new java.util.ArrayList<TipoAda>();
+    TipoAda t;
+}
+{
+    t=expresion() { lista.add(t); } ( "," t=expresion() { lista.add(t); } )*
+    { return lista; }
 }
 
 void sentencia() : {}
@@ -408,9 +595,15 @@ void sentencia() : {}
     }
 }
 
-void asignacion() #Asignacion : {}
+void asignacion() #Asignacion :
+{ VerificadorSemantico.NombreResuelto destino; TipoAda origen; Token inicio; }
 {
-    nombre() ":=" expresion() ";"
+    { inicio = getToken(1); }
+    destino=nombre() ":=" origen=expresion() ";"
+    {
+        verificador.verificarAsignacionMutabilidad(destino.simboloBase(), inicio.beginLine, inicio.beginColumn);
+        verificador.verificarInicializacion(destino.tipo(), origen, inicio.beginLine, inicio.beginColumn);
+    }
 }
 
 void llamadaProc() #LlamadaProc : {}
@@ -418,24 +611,50 @@ void llamadaProc() #LlamadaProc : {}
     nombre() ";"
 }
 
-void sentenciaIf() #If : {}
+void sentenciaIf() #If :
+{ TipoAda tCond; Token inicio; }
 {
-    <KW_IF> expresion() <KW_THEN> ( sentencia() )*
-    ( <KW_ELSIF> expresion() <KW_THEN> ( sentencia() )* )*
+    <KW_IF> { inicio = getToken(1); } tCond=expresion()
+        { verificador.verificarCondicion(tCond, inicio.beginLine, inicio.beginColumn); }
+    <KW_THEN> ( sentencia() )*
+    ( <KW_ELSIF> { inicio = getToken(1); } tCond=expresion()
+        { verificador.verificarCondicion(tCond, inicio.beginLine, inicio.beginColumn); }
+      <KW_THEN> ( sentencia() )* )*
     ( <KW_ELSE> ( sentencia() )* )?
     <KW_END> <KW_IF> ";"
 }
 
-void sentenciaFor() #For : {}
+void sentenciaFor() #For :
+{ Token t; TipoAda tipoRango; int prof; }
 {
-    <KW_FOR> <IDENTIFICADOR> <KW_IN> ( <KW_REVERSE> )? rango() <KW_LOOP>
-        ( sentencia() )*
-    <KW_END> <KW_LOOP> ";"
+    <KW_FOR> t=<IDENTIFICADOR> <KW_IN> ( <KW_REVERSE> )? tipoRango=rango()
+    {
+        prof = verificador.profundidad();
+        verificador.entrarAmbito();
+        verificador.declararVariables(java.util.List.of(t.image), tipoRango, true,
+                t.beginLine, t.beginColumn);
+    }
+    try {
+        <KW_LOOP>
+            ( sentencia() )*
+        <KW_END> <KW_LOOP> ";"
+    } catch (ParseException e) {
+        registrar(e);
+        sincronizar(PYC, KW_END, KW_ELSIF, KW_ELSE, KW_EXCEPTION, KW_WHEN);
+        if (getToken(1).kind == PYC) {
+            getNextToken();
+        }
+    } finally {
+        verificador.salirHasta(prof);
+    }
 }
 
-void sentenciaWhile() #While : {}
+void sentenciaWhile() #While :
+{ TipoAda tCond; Token inicio; }
 {
-    <KW_WHILE> expresion() <KW_LOOP>
+    <KW_WHILE> { inicio = getToken(1); } tCond=expresion()
+        { verificador.verificarCondicion(tCond, inicio.beginLine, inicio.beginColumn); }
+    <KW_LOOP>
         ( sentencia() )*
     <KW_END> <KW_LOOP> ";"
 }
@@ -445,47 +664,174 @@ void sentenciaRaise() : {}
     <KW_RAISE> ( <IDENTIFICADOR> )? ";"
 }
 
-void rango() : {}
+TipoAda rango() :
+{ TipoAda izq; TipoAda der; Token inicio; }
 {
-    expresion() ".." expresion()
+    { inicio = getToken(1); }
+    izq=expresion() ".." der=expresion()
+    { return verificador.tipoDeRango(izq, der, inicio.beginLine, inicio.beginColumn); }
 }
 
-void expresion() : {}
+TipoAda factor() #Factor(operadorUnario != null || tienePotencia) :
 {
-    relacion()
-    ( ( <KW_AND> ( LOOKAHEAD(2) <KW_THEN> )? | <KW_OR> ( LOOKAHEAD(2) <KW_ELSE> )? | <KW_XOR> )
-      relacion() )*
+    TipoAda base;
+    TipoAda exp;
+    Token inicio;
+    String operadorUnario = null;
+    boolean tienePotencia = false;
 }
-
-void relacion() : {}
 {
-    simple()
-    (
-        ( "=" | <NEQ> | "<" | <LEQ> | ">" | <GEQ> ) simple()
-      | ( <KW_NOT> )? <KW_IN> rango()
+    { inicio = getToken(1); }
+    ( <KW_ABS> { operadorUnario = "abs"; } | <KW_NOT> { operadorUnario = "not"; } )?
+    base=primario()
+    {
+        if (operadorUnario != null) {
+            base = verificador.tipoOperadorUnario(operadorUnario, base, inicio.beginLine, inicio.beginColumn);
+        }
+    }
+    ( "**" exp=primario()
+        {
+            tienePotencia = true;
+            base = verificador.tipoOperadorPotencia(base, exp, inicio.beginLine, inicio.beginColumn);
+        }
     )?
+    { jjtThis.jjtSetValue(new VerificadorSemantico.FactorOp(operadorUnario, tienePotencia)); return base; }
 }
 
-void simple() : {}
+TipoAda termino() #Termino(huboOperador) :
 {
-    ( "+" | "-" )? termino() ( ( "+" | "-" | "&" ) termino() )*
+    TipoAda izq;
+    TipoAda der;
+    Token opTok = null;
+    boolean huboOperador = false;
+    java.util.List<String> ops = new java.util.ArrayList<String>();
+}
+{
+    izq=factor()
+    (
+        ( "*" { opTok = token; } | "/" { opTok = token; } | <KW_MOD> { opTok = token; } | <KW_REM> { opTok = token; } )
+        der=factor()
+        {
+            huboOperador = true;
+            ops.add(opTok.image);
+            izq = verificador.tipoOperadorMultiplicativo(izq, der, opTok.image, opTok.beginLine, opTok.beginColumn);
+        }
+    )*
+    { jjtThis.jjtSetValue(ops); return izq; }
 }
 
-void termino() : {}
+TipoAda simple() #Simple(huboOperador) :
 {
-    factor() ( ( "*" | "/" | <KW_MOD> | <KW_REM> ) factor() )*
+    TipoAda izq;
+    TipoAda der;
+    Token opTok = null;
+    Token inicio;
+    String signo = null;
+    boolean huboOperador = false;
+    java.util.List<String> ops = new java.util.ArrayList<String>();
+}
+{
+    { inicio = getToken(1); }
+    ( "+" { signo = "+"; } | "-" { signo = "-"; } )?
+    izq=termino()
+    {
+        if (signo != null) {
+            huboOperador = true;
+            izq = verificador.tipoOperadorUnario(signo, izq, inicio.beginLine, inicio.beginColumn);
+        }
+    }
+    (
+        ( "+" { opTok = token; } | "-" { opTok = token; } | "&" { opTok = token; } )
+        der=termino()
+        {
+            huboOperador = true;
+            ops.add(opTok.image);
+            izq = verificador.tipoOperadorAditivo(izq, der, opTok.image, opTok.beginLine, opTok.beginColumn);
+        }
+    )*
+    { jjtThis.jjtSetValue(new VerificadorSemantico.SimpleOp(signo, ops)); return izq; }
 }
 
-void factor() : {}
+TipoAda relacion() #Relacion(huboOperador) :
 {
-    ( <KW_ABS> | <KW_NOT> )? primario() ( "**" primario() )?
+    TipoAda izq;
+    TipoAda der;
+    Token opTok = null;
+    boolean huboOperador = false;
+    String comparador = null;
+    boolean pertenencia = false;
+    boolean negada = false;
+}
+{
+    izq=simple()
+    (
+        ( ( "=" | <NEQ> | "<" | <LEQ> | ">" | <GEQ> ) { opTok = token; comparador = opTok.image; }
+          der=simple()
+          {
+              huboOperador = true;
+              izq = verificador.tipoOperadorRelacional(izq, der, comparador, opTok.beginLine, opTok.beginColumn);
+          }
+        )
+      | ( ( <KW_NOT> { negada = true; } )? <KW_IN> { opTok = token; pertenencia = true; }
+          der=rango()
+          {
+              huboOperador = true;
+              izq = verificador.tipoDePertenencia(izq, der, opTok.beginLine, opTok.beginColumn);
+          }
+        )
+    )?
+    {
+        jjtThis.jjtSetValue(new VerificadorSemantico.RelacionOp(comparador, pertenencia, negada));
+        return izq;
+    }
 }
 
-void primario() : {}
+TipoAda expresion() #Expresion(huboOperador) :
 {
-    "(" expresion() ")"
-  | <ENTERO> | <REAL> | <BASADO> | <CARACTER> | <CADENA> | <KW_NULL>
-  | nombre()
+    TipoAda izq;
+    TipoAda der;
+    Token opTok = null;
+    String operador = null;
+    boolean huboOperador = false;
+    java.util.List<String> ops = new java.util.ArrayList<String>();
+}
+{
+    izq=relacion()
+    (
+        (
+            <KW_AND> { opTok = token; }
+                ( LOOKAHEAD(2) <KW_THEN> { operador = "and then"; } | { operador = "and"; } )
+          | <KW_OR> { opTok = token; }
+                ( LOOKAHEAD(2) <KW_ELSE> { operador = "or else"; } | { operador = "or"; } )
+          | <KW_XOR> { opTok = token; operador = "xor"; }
+        )
+        der=relacion()
+        {
+            huboOperador = true;
+            ops.add(operador);
+            izq = verificador.tipoOperadorLogico(izq, der, operador, opTok.beginLine, opTok.beginColumn);
+        }
+    )*
+    { jjtThis.jjtSetValue(ops); return izq; }
+}
+
+TipoAda literal() #Literal :
+{ Token t; }
+{
+    ( t=<ENTERO> { jjtThis.jjtSetValue(t.image); return TipoAda.INTEGER; } )
+  | ( t=<REAL> { jjtThis.jjtSetValue(t.image); return TipoAda.FLOAT; } )
+  | ( t=<BASADO> { jjtThis.jjtSetValue(t.image); return TipoAda.INTEGER; } )
+  | ( t=<CARACTER> { jjtThis.jjtSetValue(t.image); return TipoAda.CHARACTER; } )
+  | ( t=<CADENA> { jjtThis.jjtSetValue(t.image); return TipoAda.STRING; } )
+  | ( <KW_NULL> { jjtThis.jjtSetValue("null"); return TipoAda.DESCONOCIDO; } )
+}
+
+TipoAda primario() :
+{ TipoAda t; VerificadorSemantico.NombreResuelto nr; }
+{
+    "(" t=expresion() ")" { return t; }
+  | t=literal() { return t; }
+  | nr=nombre() { return nr.tipo(); }
 }
 
 void bloqueExcepcion() : {}
@@ -499,18 +845,33 @@ void manejador() : {}
         ( sentencia() )*
 }
 
-void paquete() #Paquete : {}
+void paquete() #Paquete :
 {
+    Token nombreTok;
+    int prof;
+}
+{
+    { prof = verificador.profundidad(); }
     try {
         <KW_PACKAGE>
         (
-            <KW_BODY> <IDENTIFICADOR> <KW_IS>
+            <KW_BODY> nombreTok=<IDENTIFICADOR>
+            {
+                verificador.declararPaquete(nombreTok.image, nombreTok.beginLine, nombreTok.beginColumn);
+                verificador.entrarAmbito();
+            }
+            <KW_IS>
                 ( declaracion() )*
             ( <KW_BEGIN> ( sentencia() )* )?
             ( bloqueExcepcion() )?
             <KW_END> ( <IDENTIFICADOR> )? ";"
           |
-            <IDENTIFICADOR> <KW_IS>
+            nombreTok=<IDENTIFICADOR>
+            {
+                verificador.declararPaquete(nombreTok.image, nombreTok.beginLine, nombreTok.beginColumn);
+                verificador.entrarAmbito();
+            }
+            <KW_IS>
                 ( declaracion() )*
             ( <KW_PRIVATE> ( declaracion() )* )?
             <KW_END> ( <IDENTIFICADOR> )? ";"
@@ -518,5 +879,7 @@ void paquete() #Paquete : {}
     } catch (ParseException e) {
         registrar(e);
         sincronizar(KW_PROCEDURE, KW_FUNCTION, KW_PACKAGE);
+    } finally {
+        verificador.salirHasta(prof);
     }
 }
