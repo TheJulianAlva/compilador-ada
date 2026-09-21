@@ -69,4 +69,14 @@ public final class TraductorMensajes {
     private static String amigable(String imagenToken) {
         return NOMBRES.getOrDefault(imagenToken, imagenToken);
     }
+
+    /**
+     * Mensaje para cuando el token con el que arranca una unidad de compilación
+     * no es ninguna de las palabras clave admitidas ('procedure', 'function' o
+     * 'package'), por ejemplo por un error de tipeo como "procedue".
+     */
+    public static String esperadoUnidad(String encontrado) {
+        return "se esperaba 'procedure', 'function' o 'package' pero se encontró '"
+                + encontrado + "'";
+    }
 }

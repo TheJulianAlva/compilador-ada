@@ -246,6 +246,40 @@ void unidadCompilacion() : {}
         LOOKAHEAD(2) paquete()
       | procedimiento()
       | funcion()
+      | LOOKAHEAD({ getToken(1).kind != EOF }) unidadNoReconocida()
+    } catch (ParseException e) {
+        registrar(e);
+        sincronizar(KW_PROCEDURE, KW_FUNCTION, KW_PACKAGE);
+    }
+}
+
+/** Se dispara cuando el primer token de la unidad no es 'procedure', 'function'
+    ni 'package' (p. ej. una palabra clave mal escrita, como "procedue"). Sin esta
+    recuperación, ese error cae en el catch de unidadCompilacion(), que sincroniza
+    saltando hasta la próxima 'procedure'/'function'/'package' del archivo: si no
+    vuelve a aparecer ninguna, se descarta TODO el resto del programa y el resto de
+    errores queda sin reportar.
+    En cambio aquí reportamos el error señalando las palabras clave esperadas y,
+    asumiendo que se quiso declarar un procedimiento con la palabra clave mal
+    escrita (el caso típico), descartamos solo ese token y seguimos analizando el
+    resto como su cuerpo, para no perder los demás errores del archivo. */
+void unidadNoReconocida() #Procedimiento : {}
+{
+    {
+        Token ofensor = getToken(1);
+        erroresSintacticos.add(new com.compiladorada.errores.ErrorCompilacion(
+                com.compiladorada.errores.ErrorCompilacion.Categoria.SINTACTICO,
+                ofensor.beginLine, ofensor.beginColumn,
+                com.compiladorada.sintactico.TraductorMensajes.esperadoUnidad(ofensor.image)));
+        getNextToken();
+    }
+    try {
+        <IDENTIFICADOR> ( "(" parametros() ")" )? <KW_IS>
+            ( declaracion() )*
+        <KW_BEGIN>
+            ( sentencia() )*
+        ( bloqueExcepcion() )?
+        <KW_END> ( <IDENTIFICADOR> )? ";"
     } catch (ParseException e) {
         registrar(e);
         sincronizar(KW_PROCEDURE, KW_FUNCTION, KW_PACKAGE);
@@ -254,22 +288,32 @@ void unidadCompilacion() : {}
 
 void procedimiento() #Procedimiento : {}
 {
-    <KW_PROCEDURE> <IDENTIFICADOR> ( "(" parametros() ")" )? <KW_IS>
-        ( declaracion() )*
-    <KW_BEGIN>
-        ( sentencia() )*
-    ( bloqueExcepcion() )?
-    <KW_END> ( <IDENTIFICADOR> )? ";"
+    try {
+        <KW_PROCEDURE> <IDENTIFICADOR> ( "(" parametros() ")" )? <KW_IS>
+            ( declaracion() )*
+        <KW_BEGIN>
+            ( sentencia() )*
+        ( bloqueExcepcion() )?
+        <KW_END> ( <IDENTIFICADOR> )? ";"
+    } catch (ParseException e) {
+        registrar(e);
+        sincronizar(KW_PROCEDURE, KW_FUNCTION, KW_PACKAGE);
+    }
 }
 
 void funcion() #Funcion : {}
 {
-    <KW_FUNCTION> <IDENTIFICADOR> ( "(" parametros() ")" )? <KW_RETURN> tipoRef() <KW_IS>
-        ( declaracion() )*
-    <KW_BEGIN>
-        ( sentencia() )*
-    ( bloqueExcepcion() )?
-    <KW_END> ( <IDENTIFICADOR> )? ";"
+    try {
+        <KW_FUNCTION> <IDENTIFICADOR> ( "(" parametros() ")" )? <KW_RETURN> tipoRef() <KW_IS>
+            ( declaracion() )*
+        <KW_BEGIN>
+            ( sentencia() )*
+        ( bloqueExcepcion() )?
+        <KW_END> ( <IDENTIFICADOR> )? ";"
+    } catch (ParseException e) {
+        registrar(e);
+        sincronizar(KW_PROCEDURE, KW_FUNCTION, KW_PACKAGE);
+    }
 }
 
 void parametros() : {}
@@ -457,17 +501,22 @@ void manejador() : {}
 
 void paquete() #Paquete : {}
 {
-    <KW_PACKAGE>
-    (
-        <KW_BODY> <IDENTIFICADOR> <KW_IS>
-            ( declaracion() )*
-        ( <KW_BEGIN> ( sentencia() )* )?
-        ( bloqueExcepcion() )?
-        <KW_END> ( <IDENTIFICADOR> )? ";"
-      |
-        <IDENTIFICADOR> <KW_IS>
-            ( declaracion() )*
-        ( <KW_PRIVATE> ( declaracion() )* )?
-        <KW_END> ( <IDENTIFICADOR> )? ";"
-    )
+    try {
+        <KW_PACKAGE>
+        (
+            <KW_BODY> <IDENTIFICADOR> <KW_IS>
+                ( declaracion() )*
+            ( <KW_BEGIN> ( sentencia() )* )?
+            ( bloqueExcepcion() )?
+            <KW_END> ( <IDENTIFICADOR> )? ";"
+          |
+            <IDENTIFICADOR> <KW_IS>
+                ( declaracion() )*
+            ( <KW_PRIVATE> ( declaracion() )* )?
+            <KW_END> ( <IDENTIFICADOR> )? ";"
+        )
+    } catch (ParseException e) {
+        registrar(e);
+        sincronizar(KW_PROCEDURE, KW_FUNCTION, KW_PACKAGE);
+    }
 }
