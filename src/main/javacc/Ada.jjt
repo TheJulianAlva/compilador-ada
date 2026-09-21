@@ -19,6 +19,7 @@ import com.compiladorada.semantico.NombreAst;
 import com.compiladorada.semantico.DeclaracionVarAst;
 import com.compiladorada.semantico.DeclaracionTipoAst;
 import com.compiladorada.semantico.LiteralAst;
+import com.compiladorada.semantico.FuncionAst;
 
 public class AdaParser {
 
@@ -360,13 +361,11 @@ void funcion() #Funcion :
     { prof = verificador.profundidad(); }
     try {
         <KW_FUNCTION> nombreTok=<IDENTIFICADOR>
-        {
-            jjtThis.jjtSetValue(new NombreAst(nombreTok.image, nombreTok.beginLine,
-                    nombreTok.beginColumn, java.util.List.of()));
-        }
         ( "(" parametros=parametros() ")" )?
         <KW_RETURN> tipoRetorno=tipoRef()
         {
+            jjtThis.jjtSetValue(new FuncionAst(nombreTok.image, tipoRetorno,
+                    nombreTok.beginLine, nombreTok.beginColumn));
             java.util.List<TipoAda> tiposParam = new java.util.ArrayList<TipoAda>();
             for (VerificadorSemantico.ParametroInfo p : parametros) {
                 for (String n : p.nombres()) { tiposParam.add(p.tipo()); }

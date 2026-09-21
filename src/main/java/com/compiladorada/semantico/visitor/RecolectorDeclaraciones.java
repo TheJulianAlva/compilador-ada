@@ -3,6 +3,7 @@ package com.compiladorada.semantico.visitor;
 import com.compiladorada.semantico.Ambito;
 import com.compiladorada.semantico.DeclaracionTipoAst;
 import com.compiladorada.semantico.DeclaracionVarAst;
+import com.compiladorada.semantico.FuncionAst;
 import com.compiladorada.semantico.NombreAst;
 import com.compiladorada.semantico.TipoAda;
 import com.compiladorada.semantico.VerificadorSemantico;
@@ -87,14 +88,16 @@ public final class RecolectorDeclaraciones extends AdaParserDefaultVisitor {
 
     @Override
     public Object visit(ASTFuncion node, Object data) {
-        // El tipo de retorno no se guardó aparte en el nodo (Task 7 no lo
-        // necesitaba: lo consumía en línea). Para la Pasada 1 basta con
-        // registrar la firma con retorno = TipoAda.DESCONOCIDO como marcador
-        // de "función" (distinto de null = procedimiento); la Pasada 2 no
-        // depende de este valor exacto, solo de que retorno != null para las
-        // comprobaciones de aridad/tipo de argumentos en llamadas — que sí
-        // exigen los tipos de PARÁMETRO correctos, no el de retorno.
-        declararSubprogramaYAbrirAmbito(node, (NombreAst) node.jjtGetValue(), TipoAda.DESCONOCIDO, data);
+        // El nodo #Funcion guarda un FuncionAst (Ada.jjt#funcion(), Step 3a
+        // ampliado): a diferencia de #Procedimiento/#Paquete (NombreAst,
+        // sin tipo de retorno), aquí sí hace falta el tipo de retorno real
+        // para que las expresiones que consumen el RESULTADO de la función
+        // (asignaciones, condiciones, argumentos de otra llamada) se tipen
+        // correctamente en la Pasada 2 — usar TipoAda.DESCONOCIDO como
+        // marcador habría vuelto compatible cualquier consumo del resultado.
+        FuncionAst info = (FuncionAst) node.jjtGetValue();
+        NombreAst nombre = new NombreAst(info.nombre(), info.linea(), info.columna(), List.of());
+        declararSubprogramaYAbrirAmbito(node, nombre, info.retorno(), data);
         return data;
     }
 

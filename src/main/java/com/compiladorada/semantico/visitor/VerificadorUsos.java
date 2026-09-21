@@ -72,8 +72,19 @@ public final class VerificadorUsos extends AdaParserDefaultVisitor {
 
     @Override
     public Object visit(ASTFor node, Object data) {
+        // Igual que en #Relacion: rango() no tiene nodo propio, así que sus
+        // dos expresion() de límite son los primeros hijos DIRECTOS de #For
+        // (antes de las sentencias del cuerpo). Hay que tiparlos con
+        // tipoDeRango — Implementación A lo hace vía sentenciaFor()'s
+        // tipoRango=rango() — antes de visitar el resto normalmente.
+        TipoAda inf = tipo(node.jjtGetChild(0), data);
+        TipoAda sup = tipo(node.jjtGetChild(1), data);
+        verificador.tipoDeRango(inf, sup, node.jjtGetFirstToken().beginLine,
+                node.jjtGetFirstToken().beginColumn);
         verificador.entrarAmbitoExistente(ambitosPorNodo.get(node));
-        node.childrenAccept(this, data);
+        for (int i = 2; i < node.jjtGetNumChildren(); i++) {
+            node.jjtGetChild(i).jjtAccept(this, data);
+        }
         verificador.salirAmbito();
         return data;
     }
@@ -221,12 +232,20 @@ public final class VerificadorUsos extends AdaParserDefaultVisitor {
     public Object visit(ASTRelacion node, Object data) {
         VerificadorSemantico.RelacionOp op = (VerificadorSemantico.RelacionOp) node.jjtGetValue();
         TipoAda izq = tipo(node.jjtGetChild(0), data);
-        TipoAda der = tipo(node.jjtGetChild(1), data);
         int linea = node.jjtGetFirstToken().beginLine;
         int columna = node.jjtGetFirstToken().beginColumn;
         if (op.pertenencia()) {
-            return verificador.tipoDePertenencia(izq, der, linea, columna);
+            // rango() (Ada.jjt) no tiene nodo propio (#Rango): sus dos
+            // expresion() de límite burbujean como hijos 1 y 2 directos de
+            // #Relacion (izq es el hijo 0). Hay que tipar AMBOS límites y
+            // combinarlos con tipoDeRango antes de tipoDePertenencia — igual
+            // que hace Implementación A dentro de rango().
+            TipoAda inf = tipo(node.jjtGetChild(1), data);
+            TipoAda sup = tipo(node.jjtGetChild(2), data);
+            TipoAda rango = verificador.tipoDeRango(inf, sup, linea, columna);
+            return verificador.tipoDePertenencia(izq, rango, linea, columna);
         }
+        TipoAda der = tipo(node.jjtGetChild(1), data);
         return verificador.tipoOperadorRelacional(izq, der, op.comparador(), linea, columna);
     }
 
