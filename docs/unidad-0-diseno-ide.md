@@ -945,9 +945,11 @@ El IDE se prueba construyendo componentes Swing reales (no *mock*); la suite
 - **Tabla de símbolos.** No existe todavía. La Unidad 1 la añadirá como una
   estructura de ámbitos anidados poblada en un primer recorrido del AST
   (declaraciones) y consultada en un segundo (usos), implementando la regla base:
-  *todo identificador declarado al menos una vez y con un solo tipo*. La batería
-  de errores semánticos E1–E15 se probará con el mismo mecanismo de casos
-  `.ada` + `.expected` de la sección 8.
+  *todo identificador declarado al menos una vez y con un solo tipo*. Se probará
+  con el mismo mecanismo de casos `.ada` + `.expected` de la sección 8. Ver
+  `docs/superpowers/specs/2026-09-20-analisis-semantico-design.md` para el
+  diseño completo (dos implementaciones: acciones embebidas en `Ada.jjt` y
+  visitor de dos pasadas sobre el AST).
 - **Ampliación de `ResultadoCompilacion`.** Se le añadirá `erroresSemanticos()` y
   un acceso a la tabla de símbolos, manteniendo la firma
   `Compilador.analizar(fuente, nombre)`. El `PanelErrores` del IDE ganará una
