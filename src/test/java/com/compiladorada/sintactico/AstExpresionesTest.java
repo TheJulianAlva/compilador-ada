@@ -51,6 +51,6 @@ class AstExpresionesTest {
         SimpleNode raiz = ast("procedure P is X : Integer; begin X := 42; end;");
         SimpleNode lit = buscar(raiz, "Literal");
         assertNotNull(lit);
-        assertEquals("42", lit.jjtGetValue());
+        assertEquals("42", ((com.compiladorada.semantico.LiteralAst) lit.jjtGetValue()).texto());
     }
 }

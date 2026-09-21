@@ -16,6 +16,9 @@ import com.compiladorada.semantico.TipoAda;
 import com.compiladorada.semantico.Simbolo;
 import com.compiladorada.semantico.VerificadorSemantico;
 import com.compiladorada.semantico.NombreAst;
+import com.compiladorada.semantico.DeclaracionVarAst;
+import com.compiladorada.semantico.DeclaracionTipoAst;
+import com.compiladorada.semantico.LiteralAst;
 
 public class AdaParser {
 
@@ -312,6 +315,10 @@ void procedimiento() #Procedimiento :
     { prof = verificador.profundidad(); }
     try {
         <KW_PROCEDURE> nombreTok=<IDENTIFICADOR>
+        {
+            jjtThis.jjtSetValue(new NombreAst(nombreTok.image, nombreTok.beginLine,
+                    nombreTok.beginColumn, java.util.List.of()));
+        }
         ( "(" parametros=parametros() ")" )?
         {
             java.util.List<TipoAda> tiposParam = new java.util.ArrayList<TipoAda>();
@@ -353,6 +360,10 @@ void funcion() #Funcion :
     { prof = verificador.profundidad(); }
     try {
         <KW_FUNCTION> nombreTok=<IDENTIFICADOR>
+        {
+            jjtThis.jjtSetValue(new NombreAst(nombreTok.image, nombreTok.beginLine,
+                    nombreTok.beginColumn, java.util.List.of()));
+        }
         ( "(" parametros=parametros() ")" )?
         <KW_RETURN> tipoRetorno=tipoRef()
         {
@@ -411,7 +422,10 @@ VerificadorSemantico.ParametroInfo parametro() #Parametro :
     | <KW_OUT> { modoOut = true; }
     )?
     tipo=tipoRef()
-    { return new VerificadorSemantico.ParametroInfo(nombres, tipo, modoOut); }
+    { VerificadorSemantico.ParametroInfo info =
+            new VerificadorSemantico.ParametroInfo(nombres, tipo, modoOut);
+      jjtThis.jjtSetValue(info);
+      return info; }
 }
 
 /* Referencia a un tipo por nombre. */
@@ -452,6 +466,8 @@ void declaracionVar() #DeclaracionVar :
     ":" ( <KW_CONSTANT> { esConstante = true; } )?
     tipo=tipoRef()
     {
+        jjtThis.jjtSetValue(new DeclaracionVarAst(nombres, tipo, esConstante,
+                inicio.beginLine, inicio.beginColumn));
         verificador.declararVariables(nombres, tipo, esConstante,
                 inicio.beginLine, inicio.beginColumn);
     }
@@ -465,7 +481,10 @@ void declaracionTipo() #DeclaracionTipo :
 { Token t; TipoAda tipo; }
 {
     t=<IDENTIFICADOR> <KW_IS> tipo=definicionTipo() ";"
-    { verificador.declararTipo(t.image, tipo, t.beginLine, t.beginColumn); }
+    {
+        jjtThis.jjtSetValue(new DeclaracionTipoAst(t.image, tipo, t.beginLine, t.beginColumn));
+        verificador.declararTipo(t.image, tipo, t.beginLine, t.beginColumn);
+    }
 }
 
 void declaracionSubtipo() #DeclaracionSubtipo :
@@ -473,8 +492,9 @@ void declaracionSubtipo() #DeclaracionSubtipo :
 {
     t=<IDENTIFICADOR> <KW_IS> base=tipoRef() ( <KW_RANGE> rango() )? ";"
     {
-        verificador.declararTipo(t.image, new TipoAda.TipoSubtipo(t.image, base),
-                t.beginLine, t.beginColumn);
+        TipoAda.TipoSubtipo subtipo = new TipoAda.TipoSubtipo(t.image, base);
+        jjtThis.jjtSetValue(new DeclaracionTipoAst(t.image, subtipo, t.beginLine, t.beginColumn));
+        verificador.declararTipo(t.image, subtipo, t.beginLine, t.beginColumn);
     }
 }
 
@@ -630,6 +650,8 @@ void sentenciaFor() #For :
     <KW_FOR> t=<IDENTIFICADOR> <KW_IN> ( <KW_REVERSE> )? tipoRango=rango()
     {
         prof = verificador.profundidad();
+        jjtThis.jjtSetValue(new DeclaracionVarAst(java.util.List.of(t.image), tipoRango, true,
+                t.beginLine, t.beginColumn));
         verificador.entrarAmbito();
         verificador.declararVariables(java.util.List.of(t.image), tipoRango, true,
                 t.beginLine, t.beginColumn);
@@ -818,12 +840,12 @@ TipoAda expresion() #Expresion(huboOperador) :
 TipoAda literal() #Literal :
 { Token t; }
 {
-    ( t=<ENTERO> { jjtThis.jjtSetValue(t.image); return TipoAda.INTEGER; } )
-  | ( t=<REAL> { jjtThis.jjtSetValue(t.image); return TipoAda.FLOAT; } )
-  | ( t=<BASADO> { jjtThis.jjtSetValue(t.image); return TipoAda.INTEGER; } )
-  | ( t=<CARACTER> { jjtThis.jjtSetValue(t.image); return TipoAda.CHARACTER; } )
-  | ( t=<CADENA> { jjtThis.jjtSetValue(t.image); return TipoAda.STRING; } )
-  | ( <KW_NULL> { jjtThis.jjtSetValue("null"); return TipoAda.DESCONOCIDO; } )
+    ( t=<ENTERO> { jjtThis.jjtSetValue(new LiteralAst(t.image, TipoAda.INTEGER)); return TipoAda.INTEGER; } )
+  | ( t=<REAL> { jjtThis.jjtSetValue(new LiteralAst(t.image, TipoAda.FLOAT)); return TipoAda.FLOAT; } )
+  | ( t=<BASADO> { jjtThis.jjtSetValue(new LiteralAst(t.image, TipoAda.INTEGER)); return TipoAda.INTEGER; } )
+  | ( t=<CARACTER> { jjtThis.jjtSetValue(new LiteralAst(t.image, TipoAda.CHARACTER)); return TipoAda.CHARACTER; } )
+  | ( t=<CADENA> { jjtThis.jjtSetValue(new LiteralAst(t.image, TipoAda.STRING)); return TipoAda.STRING; } )
+  | ( <KW_NULL> { jjtThis.jjtSetValue(new LiteralAst("null", TipoAda.DESCONOCIDO)); return TipoAda.DESCONOCIDO; } )
 }
 
 TipoAda primario() :
@@ -857,6 +879,8 @@ void paquete() #Paquete :
         (
             <KW_BODY> nombreTok=<IDENTIFICADOR>
             {
+                jjtThis.jjtSetValue(new NombreAst(nombreTok.image, nombreTok.beginLine,
+                        nombreTok.beginColumn, java.util.List.of()));
                 verificador.declararPaquete(nombreTok.image, nombreTok.beginLine, nombreTok.beginColumn);
                 verificador.entrarAmbito();
             }
@@ -868,6 +892,8 @@ void paquete() #Paquete :
           |
             nombreTok=<IDENTIFICADOR>
             {
+                jjtThis.jjtSetValue(new NombreAst(nombreTok.image, nombreTok.beginLine,
+                        nombreTok.beginColumn, java.util.List.of()));
                 verificador.declararPaquete(nombreTok.image, nombreTok.beginLine, nombreTok.beginColumn);
                 verificador.entrarAmbito();
             }
