@@ -15,8 +15,10 @@ public sealed interface TipoAda {
 
     /**
      * Compatibilidad de asignación / paso de parámetro. Ada es fuertemente
-     * tipado: por defecto solo es compatible con un tipo estructuralmente
-     * igual (records comparan campo a campo, arreglos por su componente).
+     * tipado: por defecto solo es compatible con un tipo de igual nombre
+     * declarado (comparación nominal, vía {@code equals()} de record — dos
+     * tipos con la misma forma pero nombres distintos, p. ej. dos
+     * {@code range} independientes, NO son compatibles entre sí).
      * TipoAda.DESCONOCIDO es el centinela de error: siempre compatible, para
      * no encadenar errores tras uno ya reportado.
      */

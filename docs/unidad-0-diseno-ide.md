@@ -992,3 +992,11 @@ El IDE se prueba construyendo componentes Swing reales (no *mock*); la suite
 - **Aridad de llamada sin paréntesis no verificada.** Una llamada a
   procedimiento sin argumentos (`Foo;`) no valida que `Foo` en realidad
   espere cero parámetros; solo la forma con paréntesis lo hace.
+- **Los literales de enumerado no admiten sobrecarga entre tipos.** Ada
+  real permite que dos `type` enumerados distintos compartan un literal
+  (p. ej. `type C1 is (Rojo); type C2 is (Rojo);`); este corte declara cada
+  literal como un símbolo ordinario en el ámbito donde se declara el tipo,
+  así que el segundo `Rojo` se reporta como redeclaración. Es estrictamente
+  mejor que el estado anterior (donde CUALQUIER uso de un literal de
+  enumerado fallaba con "no declarado"), pero sigue siendo una limitación
+  real frente a Ada completo.
