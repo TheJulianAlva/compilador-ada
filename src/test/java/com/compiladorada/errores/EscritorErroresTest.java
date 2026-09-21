@@ -21,6 +21,7 @@ class EscritorErroresTest {
                 List.of(new TokenLexico("Hola", TipoToken.IDENTIFICADOR, 1, 1)),
                 List.of(),
                 List.of(new ErrorCompilacion(ErrorCompilacion.Categoria.SINTACTICO, 3, 1, "se esperaba ';'")),
+                List.of(),
                 null);
 
         EscritorErrores.volcar(r, dir, "prog.ada");
@@ -41,6 +42,7 @@ class EscritorErroresTest {
                 List.of(),
                 List.of(new ErrorCompilacion(ErrorCompilacion.Categoria.LEXICO, 2, 8, "carácter no válido '$'")),
                 List.of(),   // vacía: el parser no corrió
+                List.of(),
                 null);
 
         EscritorErrores.volcar(r, dir, "prog.ada");
@@ -56,8 +58,8 @@ class EscritorErroresTest {
     void sobrescribe_en_cada_llamada(@TempDir Path dir) throws Exception {
         ResultadoCompilacion conError = new ResultadoCompilacion(List.of(),
                 List.of(new ErrorCompilacion(ErrorCompilacion.Categoria.LEXICO, 1, 1, "x")),
-                List.of(), null);
-        ResultadoCompilacion limpio = new ResultadoCompilacion(List.of(), List.of(), List.of(), null);
+                List.of(), List.of(), null);
+        ResultadoCompilacion limpio = new ResultadoCompilacion(List.of(), List.of(), List.of(), List.of(), null);
 
         EscritorErrores.volcar(conError, dir, "p.ada");
         EscritorErrores.volcar(limpio, dir, "p.ada");
@@ -74,7 +76,7 @@ class EscritorErroresTest {
     @Test
     void crea_la_carpeta_si_no_existe(@TempDir Path base) throws Exception {
         Path dir = base.resolve("output");
-        EscritorErrores.volcar(new ResultadoCompilacion(List.of(), List.of(), List.of(), null),
+        EscritorErrores.volcar(new ResultadoCompilacion(List.of(), List.of(), List.of(), List.of(), null),
                 dir, "p.ada");
         assertTrue(Files.isDirectory(dir));
     }
