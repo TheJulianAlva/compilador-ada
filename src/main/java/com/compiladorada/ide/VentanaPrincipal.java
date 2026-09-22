@@ -127,7 +127,8 @@ public class VentanaPrincipal extends JFrame {
         ResultadoCompilacion r = Compilador.analizar(fuente, nombre);
 
         tablaTokens.setTokens(r.tokens());
-        panelErrores.setErrores(r.erroresLexicos(), r.erroresSintacticos(), r.sintacticoOmitido());
+        panelErrores.setErrores(r.erroresLexicos(), r.erroresSintacticos(), r.sintacticoOmitido(),
+                r.erroresSemanticos(), r.semanticoOmitido());
 
         Path fuenteSinGuardar = null;
         try {
@@ -142,14 +143,22 @@ public class VentanaPrincipal extends JFrame {
             return;
         }
 
-        String mensaje = r.sintacticoOmitido()
-                ? String.format(
+        String mensaje;
+        if (r.sintacticoOmitido()) {
+            mensaje = String.format(
                     "Compilado: %d errores léxicos — análisis sintáctico omitido hasta corregirlos (%s)",
-                    r.erroresLexicos().size(), directorioSalida.toAbsolutePath())
-                : String.format(
-                    "Compilado: %d léxicos, %d sintácticos — %s actualizado",
+                    r.erroresLexicos().size(), directorioSalida.toAbsolutePath());
+        } else if (r.semanticoOmitido()) {
+            mensaje = String.format(
+                    "Compilado: %d léxicos, %d sintácticos — análisis semántico omitido hasta corregirlos (%s)",
                     r.erroresLexicos().size(), r.erroresSintacticos().size(),
                     directorioSalida.toAbsolutePath());
+        } else {
+            mensaje = String.format(
+                    "Compilado: %d léxicos, %d sintácticos, %d semánticos — %s actualizado",
+                    r.erroresLexicos().size(), r.erroresSintacticos().size(),
+                    r.erroresSemanticos().size(), directorioSalida.toAbsolutePath());
+        }
         if (fuenteSinGuardar != null) {
             mensaje += " (fuente sin guardar en " + fuenteSinGuardar.toAbsolutePath() + ")";
         }

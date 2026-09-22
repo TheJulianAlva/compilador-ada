@@ -81,4 +81,30 @@ class PanelesTest {
         //  aunque la pestaña muestre una fila informativa de aviso.
         assertEquals(0, p.getFilasSintacticas());
     }
+
+    @Test
+    void panel_errores_incluye_la_pestania_semantica() {
+        PanelErrores p = new PanelErrores();
+        p.setErrores(List.of(), List.of(), false,
+                List.of(new ErrorCompilacion(Categoria.SEMANTICO, 3, 4, "'X' no está declarado")),
+                false);
+        assertEquals(1, p.getFilasSemanticas());
+    }
+
+    @Test
+    void setErrores_de_dos_y_tres_argumentos_dejan_la_pestania_semantica_vacia() {
+        PanelErrores p = new PanelErrores();
+        p.setErrores(List.of(), List.of());
+        assertEquals(0, p.getFilasSemanticas());
+    }
+
+    @Test
+    void semantico_omitido_no_cuenta_como_error_pero_avisa() {
+        PanelErrores p = new PanelErrores();
+        p.setErrores(List.of(), List.of(new ErrorCompilacion(Categoria.SINTACTICO, 1, 1, "x")), false,
+                List.of(), true);
+        //  getFilasSemanticas() sigue siendo el conteo de ERRORES semánticos (0),
+        //  aunque la pestaña muestre una fila informativa de aviso.
+        assertEquals(0, p.getFilasSemanticas());
+    }
 }
