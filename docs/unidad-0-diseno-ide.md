@@ -977,7 +977,14 @@ El IDE se prueba construyendo componentes Swing reales (no *mock*); la suite
   evalúan como constantes; solo se verifica que ambos extremos sean de
   tipos compatibles entre sí (`TipoAda.TipoRango` no guarda los valores
   numéricos). No hay detección de `Constraint_Error` por rango en tiempo de
-  compilación.
+  compilación — p. ej. con `type Nota is range 0 .. 100;`, la asignación
+  `Minimo_Aprobatorio : constant Nota := 150;` NO se reporta como error
+  (150 está fuera del rango declarado, pero el analizador solo ve que 150
+  es de la familia de tipo correcta gracias a los literales universales,
+  nunca evalúa el rango en sí). Evaluar rangos como constantes es trabajo
+  de mini-evaluador de expresiones constantes que las Unidades 2-3 (código
+  intermedio, propagación de constantes) necesitan de todas formas — se
+  deja fuera de la Unidad 1 a propósito, no es un descuido.
 - **Posiciones de error distintas entre A y B.** La Implementación A reporta
   en el token del operador (dispara durante el parseo); la Implementación B
   reporta en el primer token de la subexpresión (calculado desde el AST).
