@@ -20,7 +20,11 @@ public sealed interface TipoAda {
      * tipos con la misma forma pero nombres distintos, p. ej. dos
      * {@code range} independientes, NO son compatibles entre sí).
      * TipoAda.DESCONOCIDO es el centinela de error: siempre compatible, para
-     * no encadenar errores tras uno ya reportado.
+     * no encadenar errores tras uno ya reportado. LITERAL_ENTERO/LITERAL_REAL
+     * son los tipos "universales" de un literal numérico (ver docs/
+     * unidad-0-diseno-ide.md §9.4): compatibles con cualquier tipo numérico
+     * concreto de su misma familia (entero/real), en cualquiera de los dos
+     * lados de la comparación.
      */
     default boolean compatibleCon(TipoAda otro) {
         if (this == DESCONOCIDO || otro == DESCONOCIDO) {
@@ -29,7 +33,23 @@ public sealed interface TipoAda {
         if (otro instanceof TipoSubtipo st) {
             return this.compatibleCon(st.base());
         }
+        if (this == LITERAL_ENTERO || otro == LITERAL_ENTERO) {
+            TipoAda concreto = this == LITERAL_ENTERO ? otro : this;
+            return concreto == LITERAL_ENTERO || esEnteroConcreto(concreto);
+        }
+        if (this == LITERAL_REAL || otro == LITERAL_REAL) {
+            TipoAda concreto = this == LITERAL_REAL ? otro : this;
+            return concreto == LITERAL_REAL || esRealConcreto(concreto);
+        }
         return this.equals(otro);
+    }
+
+    private static boolean esEnteroConcreto(TipoAda t) {
+        return t == INTEGER || t instanceof TipoRango;
+    }
+
+    private static boolean esRealConcreto(TipoAda t) {
+        return t == FLOAT;
     }
 
     TipoAda DESCONOCIDO = new TipoDesconocido();
@@ -38,6 +58,8 @@ public sealed interface TipoAda {
     TipoEscalar BOOLEAN = new TipoEscalar("Boolean");
     TipoEscalar CHARACTER = new TipoEscalar("Character");
     TipoString STRING = new TipoString();
+    TipoLiteralNumerico LITERAL_ENTERO = new TipoLiteralNumerico(true);
+    TipoLiteralNumerico LITERAL_REAL = new TipoLiteralNumerico(false);
 
     /** Centinela de error: nunca se declara explícitamente en código Ada. */
     record TipoDesconocido() implements TipoAda {
@@ -91,5 +113,15 @@ public sealed interface TipoAda {
     /** Firma de un subprograma. {@code retorno == null} significa
      * procedimiento (sin valor de retorno); no nulo significa función. */
     record TipoSubprograma(String nombre, List<TipoAda> parametros, TipoAda retorno) implements TipoAda {
+    }
+
+    /** Tipo "universal" de un literal numérico (ver {@link #compatibleCon}) —
+     * nunca se declara explícitamente en código Ada ni se guarda como tipo
+     * de un símbolo; solo existe transitoriamente al tipar una expresión.
+     * Instancias únicas: {@link #LITERAL_ENTERO}/{@link #LITERAL_REAL}. */
+    record TipoLiteralNumerico(boolean esEntero) implements TipoAda {
+        public String nombre() {
+            return esEntero ? "<entero universal>" : "<real universal>";
+        }
     }
 }

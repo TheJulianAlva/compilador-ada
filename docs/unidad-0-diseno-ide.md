@@ -1000,3 +1000,76 @@ El IDE se prueba construyendo componentes Swing reales (no *mock*); la suite
   mejor que el estado anterior (donde CUALQUIER uso de un literal de
   enumerado fallaba con "no declarado"), pero sigue siendo una limitación
   real frente a Ada completo.
+
+### 9.4 Correcciones tras validar contra `ejemplos/calificaciones.ada` y `ejemplos/inventario_ferreteria.ada`
+
+Al correr los dos ejemplos extensos del subconjunto contra el analizador
+semántico terminado, ambos reportaban errores semánticos — no por estar mal
+escritos, sino por tres huecos reales del analizador. Se decidió corregir
+los tres:
+
+1. **Literales universales.** Un literal entero/real ahora se tipa como
+   "literal universal" (`TipoAda.LITERAL_ENTERO`/`LITERAL_REAL`, junto a
+   `DESCONOCIDO` en `TipoAda`) en vez de fijarse directamente a
+   `Integer`/`Float`. `compatibleCon` los acepta contra cualquier tipo
+   numérico concreto (`Integer`, `Float`, cualquier `range`, o un `subtype`
+   de base numérica) — así `X : Nota := 95;` (con `Nota` un `range`) ya no
+   se reporta como "tipos incompatibles". El literal nunca se guarda como
+   tipo de un símbolo (una variable siempre tiene el tipo de su
+   declaración), así que el cambio queda contenido en `TipoAda`/
+   `VerificadorSemantico`, y como el nodo `#Literal` ya guardaba el tipo
+   calculado para que la Implementación B lo reutilizara, este cambio
+   corrige ambas implementaciones sin tocar los visitors.
+2. **Conversión explícita de tipo `Tipo(expresión)`.** `nombre()` resuelve
+   la cadena de accesos vía `VerificadorSemantico.tipoDeLlamadaOIndexacion`,
+   que ya distinguía "llamada a subprograma" de "indexación de arreglo"
+   según la categoría del símbolo base; se le agregó una tercera rama: si
+   el símbolo base es un `TIPO`, es una conversión — exige exactamente un
+   argumento y el resultado es el tipo destino (validando que origen y
+   destino sean ambos de familia numérica). Otro cambio contenido a
+   `VerificadorSemantico`, sin tocar la gramática ni los visitors.
+3. **Un `package` spec exporta su contenido al ámbito envolvente.** Antes,
+   `paquete()` abría un ámbito propio tanto para la forma con `body` como
+   para el spec, así que nada declarado dentro de un spec quedaba visible
+   para una unidad de compilación hermana posterior en el mismo archivo —
+   rompiendo el patrón real de Ada de declarar tipos/constantes de dominio
+   en un `package` spec y usarlos sin calificar desde otras unidades del
+   mismo programa. Se decidió por la opción **transparente** (frente a
+   implementar `with`/`use` de verdad — ver más abajo): la forma spec (sin
+   `body`) de `paquete()` ya NO abre ámbito propio, declara su contenido
+   directamente en el ámbito vigente (global, si el `package` es de nivel
+   superior); la forma `body` sigue abriendo su propio ámbito privado. Esto
+   encaja con que el subconjunto ya trata todo el archivo como **una sola
+   unidad de compilación, sin compilación separada real** — si no hay
+   `with`/`use` (ni existen como palabras reservadas en esta gramática), no
+   tiene sentido que un `package` spec sea invisible a sus hermanos.
+
+   **Costo de esta decisión:** dos `package` distintos que declaren un
+   mismo nombre de tipo colisionan como redeclaración en el ámbito global
+   (no hay namespacing real), y no existe ninguna forma de acceso calificado
+   (`Inventario.Almacen`) — no hace falta, porque todo ya es visible sin
+   calificar. Sin riesgo de regresión: ningún caso de prueba existente
+   dependía de que un `package` spec quedara aislado.
+
+   **Alternativa NO implementada, registrada por si se decide migrar
+   después — `with`/`use` reales (aislamiento genuino de paquetes):**
+   mantener cada `package` con su propio ámbito cerrado de verdad, y
+   agregar soporte real de calificación:
+   - Nuevas palabras reservadas `with`/`use` y su producción gramatical
+     (hoy ni siquiera están en la tabla de tokens de `Ada.jjt`).
+   - Resolución de nombre calificado `Paquete.Miembro` — hoy `.` en
+     `nombre()` solo modela acceso a campo de registro
+     (`VerificadorSemantico.tipoDeCampo`, que opera sobre un `TipoAda`,
+     nunca sobre un paquete); haría falta una rama nueva que reconozca
+     cuándo el identificador base es un símbolo `PAQUETE` en vez de un
+     valor, y resuelva `Miembro` contra el ámbito propio de ESE paquete en
+     vez de contra `TipoAda.TipoRegistro.campos()`.
+   - Modelar qué declaraciones son visibles con `use Paquete;` (todas las
+     públicas, sin calificar) vs. solo alcanzables como `Paquete.Miembro`
+     sin `use`.
+   - Esto es agregar una construcción de lenguaje nueva, no arreglar el
+     semántico — cambiaría el propio subconjunto "Entra"/"No entra" de
+     `docs/CLAUDE.md`. Vale la pena si el proyecto alguna vez necesita
+     namespacing real entre paquetes (p. ej. si se agregan varios paquetes
+     de dominio con nombres de tipo que colisionan); no hace falta hoy con
+     un solo archivo por programa.

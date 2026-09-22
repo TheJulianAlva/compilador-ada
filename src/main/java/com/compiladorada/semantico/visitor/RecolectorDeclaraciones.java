@@ -5,6 +5,7 @@ import com.compiladorada.semantico.DeclaracionTipoAst;
 import com.compiladorada.semantico.DeclaracionVarAst;
 import com.compiladorada.semantico.FuncionAst;
 import com.compiladorada.semantico.NombreAst;
+import com.compiladorada.semantico.PaqueteAst;
 import com.compiladorada.semantico.TipoAda;
 import com.compiladorada.semantico.VerificadorSemantico;
 import com.compiladorada.sintactico.nodos.*;
@@ -118,16 +119,24 @@ public final class RecolectorDeclaraciones extends AdaParserDefaultVisitor {
 
     @Override
     public Object visit(ASTPaquete node, Object data) {
-        NombreAst info = (NombreAst) node.jjtGetValue();
+        PaqueteAst info = (PaqueteAst) node.jjtGetValue();
         if (info == null) {
             node.childrenAccept(this, data);
             return data;
         }
-        verificador.declararPaquete(info.base(), info.linea(), info.columna());
-        Ambito ambito = verificador.entrarAmbito();
-        ambitosPorNodo.put(node, ambito);
-        node.childrenAccept(this, data);
-        verificador.salirAmbito();
+        verificador.declararPaquete(info.nombre(), info.linea(), info.columna());
+        // El spec de un package (esBody() == false) es transparente: su
+        // contenido se declara en el ámbito vigente, sin ámbito propio — ver
+        // Ada.jjt#paquete() y docs/unidad-0-diseno-ide.md §9.4. Solo el body
+        // abre y registra un ámbito propio para que VerificadorUsos lo reentre.
+        if (info.esBody()) {
+            Ambito ambito = verificador.entrarAmbito();
+            ambitosPorNodo.put(node, ambito);
+            node.childrenAccept(this, data);
+            verificador.salirAmbito();
+        } else {
+            node.childrenAccept(this, data);
+        }
         return data;
     }
 

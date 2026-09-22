@@ -25,5 +25,9 @@ class MensajesSemanticosTest {
                 MensajesSemanticos.aridadIncorrecta("Suma", 2, 1));
         assertEquals("el argumento 1 de 'Suma' debe ser 'Integer', se encontró 'Boolean'",
                 MensajesSemanticos.argumentoIncompatible("Suma", 1, "Integer", "Boolean"));
+        assertEquals("la conversión a 'Integer' espera 1 argumento, se encontraron 2",
+                MensajesSemanticos.conversionRequiereUnArgumento("Integer", 2));
+        assertEquals("no se puede convertir 'Boolean' a 'Integer'",
+                MensajesSemanticos.conversionInvalida("Boolean", "Integer"));
     }
 }

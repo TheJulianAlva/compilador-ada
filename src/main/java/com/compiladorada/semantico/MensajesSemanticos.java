@@ -57,4 +57,12 @@ public final class MensajesSemanticos {
         return "el argumento " + posicion + " de '" + nombre + "' debe ser '" + esperado
                 + "', se encontró '" + recibido + "'";
     }
+
+    public static String conversionRequiereUnArgumento(String nombreTipo, int recibidos) {
+        return "la conversión a '" + nombreTipo + "' espera 1 argumento, se encontraron " + recibidos;
+    }
+
+    public static String conversionInvalida(String origen, String destino) {
+        return "no se puede convertir '" + origen + "' a '" + destino + "'";
+    }
 }

@@ -207,11 +207,13 @@ public final class VerificadorSemantico {
 
     /**
      * Resuelve tanto una llamada a subprograma ({@code Foo(1, 2)}) como una
-     * indexación de arreglo ({@code A(1)}) — comparten sintaxis en la
-     * gramática. {@code base} es el símbolo resuelto para el identificador
-     * base SOLO si esta es la primera "(" de la cadena de acceso (null en
-     * cualquier otro caso, ver Ada.jjt#nombre()); si es un SUBPROGRAMA se
-     * verifica aridad y tipos de argumento, si no se trata como indexación
+     * indexación de arreglo ({@code A(1)}) o una conversión explícita de tipo
+     * ({@code Integer(X)}) — las tres comparten sintaxis en la gramática.
+     * {@code base} es el símbolo resuelto para el identificador base SOLO si
+     * esta es la primera "(" de la cadena de acceso (null en cualquier otro
+     * caso, ver Ada.jjt#nombre()); si es un SUBPROGRAMA se verifica aridad y
+     * tipos de argumento, si es un TIPO se trata como conversión (exige
+     * exactamente un argumento numérico), si no se trata como indexación
      * (solo se valida el primer argumento — no hay arreglos
      * multidimensionales en el subconjunto soportado).
      */
@@ -233,8 +235,32 @@ public final class VerificadorSemantico {
             }
             return firma.retorno() != null ? firma.retorno() : TipoAda.DESCONOCIDO;
         }
+        if (base != null && base.categoria() == Simbolo.Categoria.TIPO) {
+            if (argumentos.size() != 1) {
+                reportar(linea, columna, MensajesSemanticos.conversionRequiereUnArgumento(
+                        base.nombre(), argumentos.size()));
+                return base.tipo();
+            }
+            TipoAda origen = argumentos.get(0);
+            if (!esConvertible(base.tipo(), origen)) {
+                reportar(linea, columna, MensajesSemanticos.conversionInvalida(
+                        origen.nombre(), base.nombre()));
+            }
+            return base.tipo();
+        }
         TipoAda tipoIndice = argumentos.isEmpty() ? TipoAda.DESCONOCIDO : argumentos.get(0);
         return tipoDeIndexacion(tipoActual, tipoIndice, linea, columna);
+    }
+
+    /** Una conversión explícita de tipo ({@code Tipo(Expresion)}) se acepta
+     * entre dos tipos de familia numérica (Integer/Float/range/subtipo
+     * numérico/literal universal) — no se modela conversión entre otras
+     * familias (p. ej. Boolean a Integer) en este corte. */
+    private boolean esConvertible(TipoAda destino, TipoAda origen) {
+        if (destino == TipoAda.DESCONOCIDO || origen == TipoAda.DESCONOCIDO) {
+            return true;
+        }
+        return esNumerico(destino) && esNumerico(origen);
     }
 
     // -------------------------------------------------------- verificación
@@ -334,7 +360,11 @@ public final class VerificadorSemantico {
     }
 
     private boolean esNumerico(TipoAda t) {
+        if (t instanceof TipoAda.TipoSubtipo st) {
+            return esNumerico(st.base());
+        }
         return t == TipoAda.INTEGER || t == TipoAda.FLOAT || t instanceof TipoAda.TipoRango
+                || t == TipoAda.LITERAL_ENTERO || t == TipoAda.LITERAL_REAL
                 || t == TipoAda.DESCONOCIDO;
     }
 

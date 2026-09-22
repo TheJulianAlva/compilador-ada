@@ -186,4 +186,53 @@ class VerificadorSemanticoTest {
         v.salirHasta(prof);
         assertEquals(prof, v.profundidad());
     }
+
+    @Test
+    void asignar_literal_a_variable_de_tipo_rango_no_reporta_error() {
+        VerificadorSemantico v = new VerificadorSemantico();
+        TipoAda.TipoRango nota = new TipoAda.TipoRango("Nota");
+        v.verificarInicializacion(nota, TipoAda.LITERAL_ENTERO, 1, 1);
+        assertTrue(v.errores().isEmpty());
+    }
+
+    @Test
+    void asignar_literal_real_a_variable_entera_reporta_error() {
+        VerificadorSemantico v = new VerificadorSemantico();
+        v.verificarInicializacion(TipoAda.INTEGER, TipoAda.LITERAL_REAL, 1, 1);
+        assertEquals(1, v.errores().size());
+    }
+
+    @Test
+    void conversion_de_tipo_con_argumento_numerico_devuelve_el_tipo_destino() {
+        VerificadorSemantico v = new VerificadorSemantico();
+        Simbolo tipoIntegerComoSimbolo = new Simbolo(
+                "Integer", Simbolo.Categoria.TIPO, TipoAda.INTEGER, false, 0, 0);
+        TipoAda r = v.tipoDeLlamadaOIndexacion(
+                tipoIntegerComoSimbolo, TipoAda.INTEGER, List.of(TipoAda.FLOAT), 1, 1);
+        assertEquals(TipoAda.INTEGER, r);
+        assertTrue(v.errores().isEmpty());
+    }
+
+    @Test
+    void conversion_de_tipo_con_argumento_no_numerico_reporta_error() {
+        VerificadorSemantico v = new VerificadorSemantico();
+        Simbolo tipoIntegerComoSimbolo = new Simbolo(
+                "Integer", Simbolo.Categoria.TIPO, TipoAda.INTEGER, false, 0, 0);
+        TipoAda r = v.tipoDeLlamadaOIndexacion(
+                tipoIntegerComoSimbolo, TipoAda.INTEGER, List.of(TipoAda.BOOLEAN), 1, 1);
+        assertEquals(TipoAda.INTEGER, r);
+        assertEquals(1, v.errores().size());
+        assertTrue(v.errores().get(0).mensaje().contains("no se puede convertir"));
+    }
+
+    @Test
+    void conversion_de_tipo_con_aridad_incorrecta_reporta_error() {
+        VerificadorSemantico v = new VerificadorSemantico();
+        Simbolo tipoIntegerComoSimbolo = new Simbolo(
+                "Integer", Simbolo.Categoria.TIPO, TipoAda.INTEGER, false, 0, 0);
+        v.tipoDeLlamadaOIndexacion(
+                tipoIntegerComoSimbolo, TipoAda.INTEGER, List.of(TipoAda.INTEGER, TipoAda.INTEGER), 1, 1);
+        assertEquals(1, v.errores().size());
+        assertTrue(v.errores().get(0).mensaje().contains("espera 1 argumento"));
+    }
 }

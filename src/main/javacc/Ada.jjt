@@ -21,6 +21,7 @@ import com.compiladorada.semantico.DeclaracionTipoAst;
 import com.compiladorada.semantico.ComponenteRegistroAst;
 import com.compiladorada.semantico.LiteralAst;
 import com.compiladorada.semantico.FuncionAst;
+import com.compiladorada.semantico.PaqueteAst;
 
 public class AdaParser {
 
@@ -859,9 +860,9 @@ TipoAda expresion() #Expresion(huboOperador) :
 TipoAda literal() #Literal :
 { Token t; }
 {
-    ( t=<ENTERO> { jjtThis.jjtSetValue(new LiteralAst(t.image, TipoAda.INTEGER)); return TipoAda.INTEGER; } )
-  | ( t=<REAL> { jjtThis.jjtSetValue(new LiteralAst(t.image, TipoAda.FLOAT)); return TipoAda.FLOAT; } )
-  | ( t=<BASADO> { jjtThis.jjtSetValue(new LiteralAst(t.image, TipoAda.INTEGER)); return TipoAda.INTEGER; } )
+    ( t=<ENTERO> { jjtThis.jjtSetValue(new LiteralAst(t.image, TipoAda.LITERAL_ENTERO)); return TipoAda.LITERAL_ENTERO; } )
+  | ( t=<REAL> { jjtThis.jjtSetValue(new LiteralAst(t.image, TipoAda.LITERAL_REAL)); return TipoAda.LITERAL_REAL; } )
+  | ( t=<BASADO> { jjtThis.jjtSetValue(new LiteralAst(t.image, TipoAda.LITERAL_ENTERO)); return TipoAda.LITERAL_ENTERO; } )
   | ( t=<CARACTER> { jjtThis.jjtSetValue(new LiteralAst(t.image, TipoAda.CHARACTER)); return TipoAda.CHARACTER; } )
   | ( t=<CADENA> { jjtThis.jjtSetValue(new LiteralAst(t.image, TipoAda.STRING)); return TipoAda.STRING; } )
   | ( <KW_NULL> { jjtThis.jjtSetValue(new LiteralAst("null", TipoAda.DESCONOCIDO)); return TipoAda.DESCONOCIDO; } )
@@ -898,8 +899,8 @@ void paquete() #Paquete :
         (
             <KW_BODY> nombreTok=<IDENTIFICADOR>
             {
-                jjtThis.jjtSetValue(new NombreAst(nombreTok.image, nombreTok.beginLine,
-                        nombreTok.beginColumn, java.util.List.of()));
+                jjtThis.jjtSetValue(new PaqueteAst(nombreTok.image, true,
+                        nombreTok.beginLine, nombreTok.beginColumn));
                 verificador.declararPaquete(nombreTok.image, nombreTok.beginLine, nombreTok.beginColumn);
                 verificador.entrarAmbito();
             }
@@ -911,10 +912,15 @@ void paquete() #Paquete :
           |
             nombreTok=<IDENTIFICADOR>
             {
-                jjtThis.jjtSetValue(new NombreAst(nombreTok.image, nombreTok.beginLine,
-                        nombreTok.beginColumn, java.util.List.of()));
+                // El spec de un package (sin 'body') NO abre ámbito propio:
+                // su contenido se declara directamente en el ámbito vigente
+                // (global, si es de nivel superior), para que quede visible
+                // sin calificar a las unidades hermanas — ver
+                // docs/unidad-0-diseno-ide.md §9.4 ("transparente" vs.
+                // implementar with/use reales).
+                jjtThis.jjtSetValue(new PaqueteAst(nombreTok.image, false,
+                        nombreTok.beginLine, nombreTok.beginColumn));
                 verificador.declararPaquete(nombreTok.image, nombreTok.beginLine, nombreTok.beginColumn);
-                verificador.entrarAmbito();
             }
             <KW_IS>
                 ( declaracion() )*
