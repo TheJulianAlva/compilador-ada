@@ -3,6 +3,8 @@ package com.compiladorada;
 import com.compiladorada.errores.ErrorCompilacion;
 import com.compiladorada.errores.ErrorCompilacion.Categoria;
 import com.compiladorada.generado.AdaParser;
+import com.compiladorada.intermedio.GeneradorIntermedio;
+import com.compiladorada.intermedio.ResultadoIntermedio;
 import com.compiladorada.lexico.AnalizadorLexico;
 import com.compiladorada.sintactico.nodos.SimpleNode;
 
@@ -59,11 +61,17 @@ public final class Compilador {
                 ? parser.getErroresSemanticos()
                 : List.of();
 
+        // Código intermedio: solo con un programa sin errores en ninguna fase.
+        ResultadoIntermedio intermedio = ast != null && sintacticos.isEmpty() && semanticos.isEmpty()
+                ? GeneradorIntermedio.generar(ast)
+                : null;
+
         return new ResultadoCompilacion(
                 lexico.tokens(),
                 lexico.errores(),
                 List.copyOf(sintacticos),
                 List.copyOf(semanticos),
-                ast);
+                ast,
+                intermedio);
     }
 }

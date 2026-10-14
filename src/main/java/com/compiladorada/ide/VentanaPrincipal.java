@@ -3,6 +3,7 @@ package com.compiladorada.ide;
 import com.compiladorada.Compilador;
 import com.compiladorada.ResultadoCompilacion;
 import com.compiladorada.errores.EscritorErrores;
+import com.compiladorada.intermedio.EscritorIntermedio;
 
 import javax.swing.JFrame;
 import javax.swing.JMenu;
@@ -10,6 +11,7 @@ import javax.swing.JMenuBar;
 import javax.swing.JMenuItem;
 import javax.swing.JOptionPane;
 import javax.swing.JSplitPane;
+import javax.swing.JTabbedPane;
 import javax.swing.KeyStroke;
 import javax.swing.event.CaretListener;
 import javax.swing.text.BadLocationException;
@@ -35,6 +37,8 @@ public class VentanaPrincipal extends JFrame {
     private final EditorPanel editor = new EditorPanel();
     private final TablaTokensPanel tablaTokens = new TablaTokensPanel();
     private final PanelErrores panelErrores = new PanelErrores();
+    private final PanelIntermedio panelIntermedio = new PanelIntermedio();
+    private final JTabbedPane panelInferior = new JTabbedPane();
     private final BarraEstado barraEstado = new BarraEstado();
     private Path directorioSalida = Path.of("output");
 
@@ -47,7 +51,9 @@ public class VentanaPrincipal extends JFrame {
 
         JSplitPane arriba = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, editor, tablaTokens);
         arriba.setResizeWeight(0.62);
-        JSplitPane principal = new JSplitPane(JSplitPane.VERTICAL_SPLIT, arriba, panelErrores);
+        panelInferior.addTab("Errores", panelErrores);
+        panelInferior.addTab("Código intermedio", panelIntermedio);
+        JSplitPane principal = new JSplitPane(JSplitPane.VERTICAL_SPLIT, arriba, panelInferior);
         principal.setResizeWeight(0.72);
 
         add(principal, BorderLayout.CENTER);
@@ -103,7 +109,8 @@ public class VentanaPrincipal extends JFrame {
 
         JMenu ver = new JMenu("Ver");
         ver.add(item("Mostrar/ocultar tabla de tokens", e -> tablaTokens.setVisible(!tablaTokens.isVisible())));
-        ver.add(item("Mostrar/ocultar panel de errores", e -> panelErrores.setVisible(!panelErrores.isVisible())));
+        ver.add(item("Mostrar/ocultar panel de errores y código intermedio",
+                e -> panelInferior.setVisible(!panelInferior.isVisible())));
         barra.add(ver);
 
         JMenu ayuda = new JMenu("Ayuda");
@@ -129,6 +136,7 @@ public class VentanaPrincipal extends JFrame {
         tablaTokens.setTokens(r.tokens());
         panelErrores.setErrores(r.erroresLexicos(), r.erroresSintacticos(), r.sintacticoOmitido(),
                 r.erroresSemanticos(), r.semanticoOmitido());
+        panelIntermedio.setResultado(r.intermedio());
 
         Path fuenteSinGuardar = null;
         try {
@@ -138,6 +146,7 @@ public class VentanaPrincipal extends JFrame {
                 Files.writeString(fuenteSinGuardar, fuente);
             }
             EscritorErrores.volcar(r, directorioSalida, nombre);
+            EscritorIntermedio.volcar(r, directorioSalida);
         } catch (IOException | UncheckedIOException e) {
             barraEstado.setResultado("No se pudo escribir en " + directorioSalida.toAbsolutePath());
             return;
@@ -226,6 +235,10 @@ public class VentanaPrincipal extends JFrame {
 
     public PanelErrores getPanelErrores() {
         return panelErrores;
+    }
+
+    public PanelIntermedio getPanelIntermedio() {
+        return panelIntermedio;
     }
 
     public BarraEstado getBarraEstado() {

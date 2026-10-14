@@ -74,4 +74,27 @@ class CompiladorTest {
         assertFalse(r.erroresSintacticos().isEmpty());
         assertTrue(r.erroresSemanticos().isEmpty());
     }
+
+    @Test
+    void programa_valido_genera_codigo_intermedio() {
+        ResultadoCompilacion r = Compilador.analizar(
+                "procedure P is A : Integer := 2; begin A := A + 1; end P;", "p.ada");
+        assertFalse(r.intermedioOmitido());
+        assertNotNull(r.intermedio());
+        assertEquals(2, r.intermedio().filas().size());
+    }
+
+    @Test
+    void con_errores_en_cualquier_fase_no_hay_codigo_intermedio() {
+        ResultadoCompilacion lexico = Compilador.analizar("procedure P is X : Integer $ begin null; end;", "p.ada");
+        ResultadoCompilacion sintactico = Compilador.analizar("procedure P is X : Integer begin null; end;", "p.ada");
+        ResultadoCompilacion semantico = Compilador.analizar(
+                "procedure P is A : Integer := 1; begin B := A + 1; end P;", "p.ada");
+        for (ResultadoCompilacion r : new ResultadoCompilacion[] {lexico, sintactico, semantico}) {
+            assertTrue(r.tieneErrores());
+            assertTrue(r.intermedioOmitido());
+            assertNull(r.intermedio());
+        }
+        assertFalse(semantico.erroresSemanticos().isEmpty());
+    }
 }

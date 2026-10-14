@@ -62,4 +62,31 @@ class VentanaPrincipalTest {
         }
         assertEquals(java.util.List.of("Archivo", "Editar", "Compilar", "Ver", "Ayuda"), menus);
     }
+
+    @Test
+    void compilar_llena_la_pestana_de_codigo_intermedio_y_escribe_el_archivo(@TempDir Path dir) throws Exception {
+        VentanaPrincipal v = new VentanaPrincipal();
+        v.setDirectorioSalida(dir);
+        v.getEditor().setTexto("procedure P is A : Integer := 2; B : Integer; begin B := A * 3 + 1; end P;");
+
+        v.compilar();
+
+        assertEquals(2, v.getPanelIntermedio().getFilas());
+        assertTrue(v.getPanelIntermedio().getDetalle().contains("B : Integer = 7"),
+                v.getPanelIntermedio().getDetalle());
+        String txt = Files.readString(dir.resolve("codigo_intermedio.txt"));
+        assertTrue(txt.contains("+ * A 3 1"), txt);
+    }
+
+    @Test
+    void con_errores_el_panel_intermedio_queda_vacio_y_el_archivo_lo_indica(@TempDir Path dir) throws Exception {
+        VentanaPrincipal v = new VentanaPrincipal();
+        v.setDirectorioSalida(dir);
+        v.getEditor().setTexto("procedure P is X : Integer begin null; end;");
+
+        v.compilar();
+
+        assertEquals(0, v.getPanelIntermedio().getFilas());
+        assertTrue(Files.readString(dir.resolve("codigo_intermedio.txt")).contains("OMITIDA"));
+    }
 }
