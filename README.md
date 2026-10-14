@@ -19,8 +19,18 @@ Etapa **léxica y sintáctica** con IDE:
   mostrando todos los errores de la compilación.
 - Volcado de errores a archivo, actualizado en cada compilación.
 
-Las siguientes unidades (semántico, intermedio, optimización, objeto) se
-construyen sobre el mismo AST y tabla de símbolos que produce esta etapa.
+Sobre ese front-end ya hay análisis semántico (pestaña **Errores → Semánticos**)
+y **generación de código intermedio aritmético** (pestaña **Código intermedio**):
+para cada declaración con valor inicial, asignación o argumento aritmético de
+una llamada del procedimiento principal se muestra la notación **prefija**
+(preorden), la **posfija** (postorden), los **cuádruplos** de tres direcciones y
+el **valor** evaluado con una memoria de variables (Integer de 32 bits, Float).
+Solo corre si no hay errores previos; el contenido de `if`/`while`/`for` se
+ignora. El reporte también se guarda en `output/codigo_intermedio.txt`. Ejemplo:
+`ejemplos/codigo_intermedio.ada`.
+
+Las siguientes unidades (optimización, objeto) se construyen sobre el mismo AST
+y tabla de símbolos.
 
 ## Stack
 
@@ -59,6 +69,8 @@ src/main/javacc/Ada.jjt          Gramática (léxico + sintáctico)
 src/main/java/com/compiladorada/
   lexico/                        Analizador léxico y tipos de token
   sintactico/                    AST y traducción de mensajes
+  semantico/                     Tabla de símbolos, tipos y verificación
+  intermedio/                    Código intermedio: prefijo, posfijo, cuádruplos, evaluación
   errores/                       Modelo de errores y volcado a archivo
   ide/                           IDE Swing (editor, tablas, paneles)
   Compilador.java                Orquesta el análisis de una fuente

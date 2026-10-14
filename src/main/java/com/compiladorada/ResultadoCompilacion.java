@@ -1,6 +1,7 @@
 package com.compiladorada;
 
 import com.compiladorada.errores.ErrorCompilacion;
+import com.compiladorada.intermedio.ResultadoIntermedio;
 import com.compiladorada.lexico.TokenLexico;
 import com.compiladorada.sintactico.nodos.SimpleNode;
 
@@ -11,7 +12,15 @@ public record ResultadoCompilacion(
         List<ErrorCompilacion> erroresLexicos,
         List<ErrorCompilacion> erroresSintacticos,
         List<ErrorCompilacion> erroresSemanticos,
-        SimpleNode ast) {
+        SimpleNode ast,
+        ResultadoIntermedio intermedio) {
+
+    /** Resultado sin fase de código intermedio (equivale a {@code intermedio == null}). */
+    public ResultadoCompilacion(List<TokenLexico> tokens, List<ErrorCompilacion> erroresLexicos,
+                                List<ErrorCompilacion> erroresSintacticos,
+                                List<ErrorCompilacion> erroresSemanticos, SimpleNode ast) {
+        this(tokens, erroresLexicos, erroresSintacticos, erroresSemanticos, ast, null);
+    }
 
     public boolean tieneErrores() {
         return !erroresLexicos.isEmpty() || !erroresSintacticos.isEmpty() || !erroresSemanticos.isEmpty();
@@ -35,5 +44,14 @@ public record ResultadoCompilacion(
      */
     public boolean semanticoOmitido() {
         return !erroresLexicos.isEmpty() || !erroresSintacticos.isEmpty();
+    }
+
+    /**
+     * {@code true} si la generación de código intermedio NO se ejecutó por
+     * haber errores léxicos, sintácticos o semánticos. Las fases son
+     * secuenciales; en ese caso {@link #intermedio()} es {@code null}.
+     */
+    public boolean intermedioOmitido() {
+        return tieneErrores();
     }
 }
