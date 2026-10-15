@@ -87,6 +87,6 @@ class VentanaPrincipalTest {
         v.compilar();
 
         assertEquals(0, v.getPanelIntermedio().getFilas());
-        assertTrue(Files.readString(dir.resolve("codigo_intermedio.txt")).contains("OMITIDA"));
+        assertTrue(Files.readString(dir.resolve("codigo_intermedio.txt")).startsWith("Generación OMITIDA"));
     }
 }

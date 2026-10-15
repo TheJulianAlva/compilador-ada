@@ -21,8 +21,7 @@ public record ResultadoIntermedio(
 
     /** Reporte en texto plano (el que se guarda en {@code output/codigo_intermedio.txt}). */
     public String aTexto() {
-        StringBuilder sb = new StringBuilder("== CÓDIGO INTERMEDIO (expresiones aritméticas) ==\n\n");
-        sb.append("Expresiones procesadas: ").append(filas.size()).append("\n\n");
+        StringBuilder sb = new StringBuilder();
         for (FilaIntermedia f : filas) {
             sb.append("Línea ").append(f.linea()).append(": ").append(f.fuente()).append('\n');
             sb.append("  Prefijo   : ").append(f.prefijo()).append('\n');

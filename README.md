@@ -26,7 +26,7 @@ una llamada del procedimiento principal se muestra la notación **prefija**
 (preorden), la **posfija** (postorden), los **cuádruplos** de tres direcciones y
 el **valor** evaluado con una memoria de variables (Integer de 32 bits, Float).
 Solo corre si no hay errores previos; el contenido de `if`/`while`/`for` se
-ignora. El reporte también se guarda en `output/codigo_intermedio.txt`. Ejemplo:
+ignora. El reporte también se guarda en `output/codigo_intermedio.txt` (menú **Compilar → Abrir carpeta output/** la abre en el explorador de archivos). Ejemplo:
 `ejemplos/codigo_intermedio.ada`.
 
 Las siguientes unidades (optimización, objeto) se construyen sobre el mismo AST

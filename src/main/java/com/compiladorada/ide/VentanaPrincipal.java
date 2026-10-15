@@ -206,14 +206,21 @@ public class VentanaPrincipal extends JFrame {
         }
     }
 
+    /** Abre {@code output/} en el explorador de archivos del sistema, creándola si no existe. */
     private void abrirCarpetaSalida() {
         try {
             Files.createDirectories(directorioSalida);
             if (Desktop.isDesktopSupported()
                     && Desktop.getDesktop().isSupported(Desktop.Action.OPEN)) {
                 Desktop.getDesktop().open(directorioSalida.toFile());
+                return;
             }
-        } catch (IOException | RuntimeException ignore) {
+            // Sin soporte de java.awt.Desktop (común en Linux): comando nativo del sistema.
+            String so = System.getProperty("os.name", "").toLowerCase();
+            String abridor = so.contains("win") ? "explorer" : so.contains("mac") ? "open" : "xdg-open";
+            new ProcessBuilder(abridor, directorioSalida.toAbsolutePath().toString()).start();
+        } catch (IOException | RuntimeException e) {
+            barraEstado.setResultado("No se pudo abrir " + directorioSalida.toAbsolutePath());
         }
     }
 

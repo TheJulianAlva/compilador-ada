@@ -17,7 +17,7 @@ public final class EscritorIntermedio {
 
     public static void volcar(ResultadoCompilacion r, Path dirSalida) {
         String contenido = r.intermedioOmitido() || r.intermedio() == null
-                ? "== CÓDIGO INTERMEDIO ==\n\nGeneración OMITIDA: el programa tiene errores léxicos, "
+                ? "Generación OMITIDA: el programa tiene errores léxicos, "
                         + "sintácticos o semánticos pendientes.\n"
                 : r.intermedio().aTexto();
         try {
