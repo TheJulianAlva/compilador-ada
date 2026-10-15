@@ -168,6 +168,9 @@ class GeneradorIntermedioTest {
     void reporte_en_texto_incluye_metodos_y_valores_finales() {
         ResultadoIntermedio r = generar("A : Integer := 2;", "A := A * 3;");
         String t = r.aTexto();
+        assertFalse(t.contains("CÓDIGO INTERMEDIO"), t);
+        assertFalse(t.contains("Expresiones procesadas"), t);
+        assertTrue(t.startsWith("Línea "), t);
         assertTrue(t.contains("Prefijo"));
         assertTrue(t.contains("preorden"));
         assertTrue(t.contains("postorden"));
