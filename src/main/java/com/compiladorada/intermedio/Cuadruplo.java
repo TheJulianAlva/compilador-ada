@@ -1,14 +1,14 @@
 package com.compiladorada.intermedio;
 
-/** Instrucción de tres direcciones: {@code (op, arg1, arg2, resultado)}. */
-public record Cuadruplo(String op, String arg1, String arg2, String resultado) {
+/**
+ * Un paso de la expresión en tres direcciones: {@code # | operador | arg1 |
+ * arg2 | resultado}. {@code numero} empieza en 1 en cada expresión. Los
+ * operadores de un solo argumento ({@code neg}, {@code abs}) dejan {@code arg2} vacío.
+ */
+public record Cuadruplo(int numero, String op, String arg1, String arg2, String resultado) {
 
     @Override
     public String toString() {
-        return "(" + op + ", " + vacio(arg1) + ", " + vacio(arg2) + ", " + vacio(resultado) + ")";
-    }
-
-    private static String vacio(String s) {
-        return s == null || s.isEmpty() ? "_" : s;
+        return numero + " | " + op + " | " + arg1 + " | " + arg2 + " | " + resultado;
     }
 }

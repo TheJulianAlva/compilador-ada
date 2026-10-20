@@ -24,10 +24,10 @@ import java.util.Map;
 
 /**
  * Recorre el cuerpo principal del programa (el último procedimiento de nivel
- * superior) en orden y, para cada declaración con valor inicial, asignación o
- * argumento aritmético de una llamada, produce una {@link FilaIntermedia}:
- * prefijo, posfijo, cuádruplos y valor. Mantiene una memoria de variables que
- * se actualiza en orden de aparición.
+ * superior) en orden y, para cada expresión con operadores (en una declaración
+ * con valor inicial, una asignación o un argumento de llamada), produce una
+ * {@link FilaIntermedia}: cuádruplos paso a paso, prefijo, posfijo y valor.
+ * Mantiene una memoria de variables que se actualiza en orden de aparición.
  *
  * <p>No entra a {@code if}/{@code while}/{@code for}: solo marca como "sin
  * valor" las variables que esas construcciones asignan, para no mostrar un
@@ -155,9 +155,12 @@ public final class GeneradorIntermedio {
     // --------------------------------------------------------------- núcleo
 
     /**
+     * Evalúa la expresión y, si {@code guardar}, deja el valor en cada destino.
+     * Solo las expresiones con al menos un operador producen una fila (las
+     * asignaciones simples como {@code X := 5} solo actualizan la memoria).
+     *
      * @param sentencia nodo cuyo texto fuente se muestra
-     * @param guardar   si {@code true}, el valor se almacena en cada destino
-     * @return {@code true} si la expresión era aritmética y se generó una fila
+     * @return {@code true} si la expresión era aritmética (con o sin fila)
      */
     private boolean procesar(Node sentencia, Node expresion, List<String> destinos, boolean guardar) {
         ArbolExpresion arbol = constructor.construir(expresion);
@@ -165,30 +168,26 @@ public final class GeneradorIntermedio {
             return false;
         }
         int linea = ((SimpleNode) sentencia).jjtGetFirstToken().beginLine;
-        String valor = null;
-        String tipo = null;
+        Valor valor = null;
         String error = null;
         try {
-            Valor v = evaluador.evaluar(arbol);
-            valor = v.toString();
-            tipo = v.tipo();
+            valor = evaluador.evaluar(arbol);
             if (guardar) {
                 for (String d : destinos) {
                     Clase esperada = clases.get(d.toLowerCase(Locale.ROOT));
-                    if (esperada != null && (esperada == Clase.REAL) != v.esReal()) {
-                        throw new Evaluador.ErrorEvaluacion("no se puede asignar " + v.tipo()
+                    if (esperada != null && (esperada == Clase.REAL) != valor.esReal()) {
+                        throw new Evaluador.ErrorEvaluacion("no se puede asignar " + valor.tipo()
                                 + " a '" + d + "' (" + tiposDeclarados.get(d.toLowerCase(Locale.ROOT)) + ")");
                     }
                 }
                 for (String d : destinos) {
                     String clave = d.toLowerCase(Locale.ROOT);
-                    memoria.put(clave, v);
+                    memoria.put(clave, valor);
                     sinValor.remove(clave);
                 }
             }
         } catch (Evaluador.ErrorEvaluacion e) {
             valor = null;
-            tipo = null;
             error = e.getMessage();
             if (guardar) {
                 for (String d : destinos) {
@@ -198,9 +197,13 @@ public final class GeneradorIntermedio {
                 }
             }
         }
-        filas.add(new FilaIntermedia(linea, textoFuente((SimpleNode) sentencia), tipo,
-                Notaciones.prefijo(arbol), Notaciones.posfijo(arbol),
-                GeneradorCuadruplos.generar(arbol, guardar ? destinos : List.of()), valor, error));
+        if (arbol instanceof ArbolExpresion.Binario || arbol instanceof ArbolExpresion.Unario) {
+            filas.add(new FilaIntermedia(linea, textoFuente((SimpleNode) sentencia),
+                    valor == null ? null : valor.tipo(),
+                    Notaciones.prefijo(arbol), Notaciones.posfijo(arbol),
+                    GeneradorCuadruplos.generar(arbol),
+                    valor == null ? null : valor.toString(), error));
+        }
         return true;
     }
 

@@ -21,10 +21,10 @@ Etapa **léxica y sintáctica** con IDE:
 
 Sobre ese front-end ya hay análisis semántico (pestaña **Errores → Semánticos**)
 y **generación de código intermedio aritmético** (pestaña **Código intermedio**):
-para cada declaración con valor inicial, asignación o argumento aritmético de
-una llamada del procedimiento principal se muestra la notación **prefija**
-(preorden), la **posfija** (postorden), los **cuádruplos** de tres direcciones y
-el **valor** evaluado con una memoria de variables (Integer de 32 bits, Float).
+para cada expresión con operadores (en una declaración con valor inicial, una
+asignación o un argumento de llamada) del procedimiento principal se muestran
+los **cuádruplos** paso a paso (`# | Operador | Arg 1 | Arg 2 | Resultado`), la
+notación **prefija** (preorden), la **posfija** (postorden) y el **valor** evaluado con una memoria de variables (Integer de 32 bits, Float).
 Solo corre si no hay errores previos; el contenido de `if`/`while`/`for` se
 ignora. El reporte también se guarda en `output/codigo_intermedio.txt` (menú **Compilar → Abrir carpeta output/** la abre en el explorador de archivos). Ejemplo:
 `ejemplos/codigo_intermedio.ada`.

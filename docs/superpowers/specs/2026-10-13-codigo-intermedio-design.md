@@ -34,7 +34,7 @@ numéricos, respetando la compatibilidad de tipos.
 |---|---|
 | `ArbolExpresion` | Árbol pequeño (`Operando`, `Binario`, `Unario`) construido desde los nodos del AST (`Simple`, `Termino`, `Factor`, `Literal`, `Nombre`). |
 | `Notaciones` | Prefijo = recorrido en preorden; posfijo = recorrido en postorden. |
-| `GeneradorCuadruplos` | Mismo postorden; emite `(op, arg1, arg2, resultado)` con temporales `t1, t2…`; el resultado final se asigna al destino. |
+| `GeneradorCuadruplos` | Mismo postorden; emite pasos numerados `# | operador | arg1 | arg2 | resultado` con temporales `T1, T2…`, reiniciados en cada expresión. No se emiten asignaciones. |
 | `Evaluador` | Mantiene memoria `nombre → valor` y calcula cada expresión. |
 | `ResultadoIntermedio` | Filas (línea, fuente, prefijo, posfijo, cuádruplos, valor o error), memoria final y descripción de métodos. |
 
@@ -81,3 +81,12 @@ omitió). Se agrega un `intermedioOmitido()` análogo a `semanticoOmitido()`.
   mantener la fase testeable de forma aislada.
 - Entregables de salida: prefijo, posfijo y cuádruplos (confirmado por el
   usuario), valores evaluados con memoria acumulativa (confirmado).
+
+## Revisión (2026-10-19, indicada por la profesora)
+
+- No se muestran asignaciones: solo las expresiones con al menos un operador
+  generan bloque (las asignaciones simples solo actualizan la memoria).
+- Cada bloque: título con la sentencia completa, tabla de cuádruplos,
+  prefijo, posfijo y resultado final.
+- La pestaña del IDE es maestro-detalle (lista de expresiones + tabla de la
+  seleccionada).

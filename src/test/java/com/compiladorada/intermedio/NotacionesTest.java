@@ -9,6 +9,7 @@ import org.junit.jupiter.api.Test;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class NotacionesTest {
 
@@ -52,22 +53,25 @@ class NotacionesTest {
     }
 
     @Test
-    void cuadruplos_con_temporales_y_asignacion_final() {
+    void cuadruplos_paso_a_paso_con_temporales_y_sin_asignacion() {
         ArbolExpresion a = bin("+", v("A"), bin("*", v("B"), n("2")));
-        List<Cuadruplo> q = GeneradorCuadruplos.generar(a, List.of("X"));
-        assertEquals(List.of("(*, B, 2, t1)", "(+, A, t1, t2)", "(:=, t2, _, X)"),
+        List<Cuadruplo> q = GeneradorCuadruplos.generar(a);
+        assertEquals(List.of("1 | * | B | 2 | T1", "2 | + | A | T1 | T2"),
                 q.stream().map(Cuadruplo::toString).toList());
     }
 
     @Test
-    void cuadruplos_de_hoja_unario_y_varios_destinos() {
-        assertEquals(List.of("(:=, 5, _, Y)"),
-                GeneradorCuadruplos.generar(n("5"), List.of("Y")).stream().map(Cuadruplo::toString).toList());
-        assertEquals(List.of("(neg, A, _, t1)"),
-                GeneradorCuadruplos.generar(new Unario("neg", v("A")), List.of()).stream()
-                        .map(Cuadruplo::toString).toList());
-        assertEquals(List.of("(:=, 1, _, P)", "(:=, 1, _, Q)"),
-                GeneradorCuadruplos.generar(n("1"), List.of("P", "Q")).stream()
-                        .map(Cuadruplo::toString).toList());
+    void cuadruplos_de_hoja_vacios_y_unario_con_arg2_vacio() {
+        assertTrue(GeneradorCuadruplos.generar(n("5")).isEmpty());
+        List<Cuadruplo> q = GeneradorCuadruplos.generar(new Unario("neg", v("A")));
+        assertEquals(1, q.size());
+        assertEquals(new Cuadruplo(1, "neg", "A", "", "T1"), q.get(0));
+    }
+
+    @Test
+    void cuadruplos_de_expresion_con_parentesis() {
+        ArbolExpresion a = bin("*", bin("+", v("A"), v("B")), bin("-", v("C"), v("D")));
+        assertEquals(List.of("1 | + | A | B | T1", "2 | - | C | D | T2", "3 | * | T1 | T2 | T3"),
+                GeneradorCuadruplos.generar(a).stream().map(Cuadruplo::toString).toList());
     }
 }

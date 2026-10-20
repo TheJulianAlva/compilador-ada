@@ -7,42 +7,41 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Cuádruplos por recorrido en postorden: cada operador produce un temporal
- * {@code t1, t2…} (reiniciados en cada expresión). Al final se asigna el
- * resultado a cada destino con {@code (:=, lugar, _, destino)}.
+ * Cuádruplos de una expresión por recorrido en postorden: cada operador es un
+ * paso numerado que deja su resultado en un temporal {@code T1, T2…}. La
+ * numeración y los temporales se reinician en cada expresión. No se emiten
+ * asignaciones: solo las operaciones de la expresión.
  */
 public final class GeneradorCuadruplos {
 
     private final List<Cuadruplo> salida = new ArrayList<>();
-    private int temporales;
 
     private GeneradorCuadruplos() {
     }
 
-    public static List<Cuadruplo> generar(ArbolExpresion arbol, List<String> destinos) {
+    public static List<Cuadruplo> generar(ArbolExpresion arbol) {
         GeneradorCuadruplos g = new GeneradorCuadruplos();
-        String lugar = g.postorden(arbol);
-        for (String destino : destinos) {
-            g.salida.add(new Cuadruplo(":=", lugar, "", destino));
-        }
+        g.postorden(arbol);
         return g.salida;
     }
 
-    /** Devuelve el "lugar" donde queda el valor: hoja tal cual, o un temporal. */
+    /** Devuelve el "lugar" donde queda el valor: la hoja tal cual, o el temporal del paso. */
     private String postorden(ArbolExpresion a) {
         if (a instanceof Binario b) {
             String izq = postorden(b.izq());
             String der = postorden(b.der());
-            String t = "t" + (++temporales);
-            salida.add(new Cuadruplo(b.op(), izq, der, t));
-            return t;
+            return paso(b.op(), izq, der);
         }
         if (a instanceof Unario u) {
-            String o = postorden(u.operando());
-            String t = "t" + (++temporales);
-            salida.add(new Cuadruplo(u.op(), o, "", t));
-            return t;
+            return paso(u.op(), postorden(u.operando()), "");
         }
         return Notaciones.hoja(a);
+    }
+
+    private String paso(String op, String arg1, String arg2) {
+        int n = salida.size() + 1;
+        String t = "T" + n;
+        salida.add(new Cuadruplo(n, op, arg1, arg2, t));
+        return t;
     }
 }

@@ -81,7 +81,7 @@ class CompiladorTest {
                 "procedure P is A : Integer := 2; begin A := A + 1; end P;", "p.ada");
         assertFalse(r.intermedioOmitido());
         assertNotNull(r.intermedio());
-        assertEquals(2, r.intermedio().filas().size());
+        assertEquals(1, r.intermedio().filas().size());
     }
 
     @Test

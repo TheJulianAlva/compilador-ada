@@ -71,7 +71,10 @@ class VentanaPrincipalTest {
 
         v.compilar();
 
-        assertEquals(2, v.getPanelIntermedio().getFilas());
+        assertEquals(1, v.getPanelIntermedio().getFilas());
+        assertEquals(2, v.getPanelIntermedio().getFilasCuadruplos());
+        assertTrue(v.getPanelIntermedio().getResumen().contains("Resultado: 7"),
+                v.getPanelIntermedio().getResumen());
         assertTrue(v.getPanelIntermedio().getDetalle().contains("B : Integer = 7"),
                 v.getPanelIntermedio().getDetalle());
         String txt = Files.readString(dir.resolve("codigo_intermedio.txt"));
