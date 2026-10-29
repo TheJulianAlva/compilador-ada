@@ -41,6 +41,7 @@ public class VentanaPrincipal extends JFrame {
     private final PanelIntermedio panelIntermedio = new PanelIntermedio();
     private final PanelOptimizado panelOptimizado = new PanelOptimizado();
     private final JTabbedPane panelInferior = new JTabbedPane();
+    private final JTabbedPane panelDerecho = new JTabbedPane();
     private final BarraEstado barraEstado = new BarraEstado();
     private Path directorioSalida = Path.of("output");
 
@@ -51,11 +52,12 @@ public class VentanaPrincipal extends JFrame {
         setLocationRelativeTo(null);
         setJMenuBar(construirMenu());
 
-        JSplitPane arriba = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, editor, tablaTokens);
+        panelDerecho.addTab("Tokens", tablaTokens);
+        panelDerecho.addTab("Optimizado", panelOptimizado);
+        JSplitPane arriba = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, editor, panelDerecho);
         arriba.setResizeWeight(0.62);
         panelInferior.addTab("Errores", panelErrores);
         panelInferior.addTab("Código intermedio", panelIntermedio);
-        panelInferior.addTab("Optimizado", panelOptimizado);
         JSplitPane principal = new JSplitPane(JSplitPane.VERTICAL_SPLIT, arriba, panelInferior);
         principal.setResizeWeight(0.72);
 
@@ -111,8 +113,8 @@ public class VentanaPrincipal extends JFrame {
         barra.add(compilar);
 
         JMenu ver = new JMenu("Ver");
-        ver.add(item("Mostrar/ocultar tabla de tokens", e -> tablaTokens.setVisible(!tablaTokens.isVisible())));
-        ver.add(item("Mostrar/ocultar panel de errores, código intermedio y optimizado",
+        ver.add(item("Mostrar/ocultar tabla de tokens y optimizado", e -> panelDerecho.setVisible(!panelDerecho.isVisible())));
+        ver.add(item("Mostrar/ocultar panel de errores y código intermedio",
                 e -> panelInferior.setVisible(!panelInferior.isVisible())));
         barra.add(ver);
 
@@ -189,8 +191,22 @@ public class VentanaPrincipal extends JFrame {
         }
     }
 
+    /**
+     * Carpeta donde abren los diálogos de archivo: la del archivo actual si
+     * hay uno, si no {@code ejemplos/} del proyecto y, en su defecto, la
+     * carpeta desde donde se ejecuta el IDE. Funciona igual en Linux y Windows.
+     */
+    java.io.File carpetaInicial() {
+        var actual = editor.getRutaArchivo();
+        if (actual.isPresent() && actual.get().toAbsolutePath().getParent() != null) {
+            return actual.get().toAbsolutePath().getParent().toFile();
+        }
+        Path ejemplos = Path.of("ejemplos").toAbsolutePath();
+        return Files.isDirectory(ejemplos) ? ejemplos.toFile() : Path.of("").toAbsolutePath().toFile();
+    }
+
     private void accionAbrir() {
-        javax.swing.JFileChooser fc = new javax.swing.JFileChooser();
+        javax.swing.JFileChooser fc = new javax.swing.JFileChooser(carpetaInicial());
         if (fc.showOpenDialog(this) == javax.swing.JFileChooser.APPROVE_OPTION) {
             editor.abrir(fc.getSelectedFile().toPath());
         }
@@ -205,7 +221,7 @@ public class VentanaPrincipal extends JFrame {
     }
 
     private void accionGuardarComo() {
-        javax.swing.JFileChooser fc = new javax.swing.JFileChooser();
+        javax.swing.JFileChooser fc = new javax.swing.JFileChooser(carpetaInicial());
         if (fc.showSaveDialog(this) == javax.swing.JFileChooser.APPROVE_OPTION) {
             editor.guardarComo(fc.getSelectedFile().toPath());
         }

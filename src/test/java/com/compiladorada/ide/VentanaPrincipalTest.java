@@ -102,7 +102,6 @@ class VentanaPrincipalTest {
 
         v.compilar();
 
-        assertEquals(fuente, v.getPanelOptimizado().getOriginal());
         assertEquals("procedure P is\nA:Integer:=2;\nB:Integer;\nbegin\nB:=A+A;\nend P;",
                 v.getPanelOptimizado().getOptimizado());
         assertTrue(Files.readString(dir.resolve("codigo_optimizado.ada")).contains("B:=A+A;"));
@@ -118,5 +117,16 @@ class VentanaPrincipalTest {
 
         assertTrue(v.getPanelOptimizado().getOptimizado().startsWith("Optimización no ejecutada"));
         assertTrue(Files.readString(dir.resolve("codigo_optimizado.ada")).startsWith("Optimización OMITIDA"));
+    }
+
+    @Test
+    void los_dialogos_de_archivo_abren_en_la_carpeta_del_archivo_actual_o_en_ejemplos(@TempDir Path dir) throws Exception {
+        VentanaPrincipal v = new VentanaPrincipal();
+        assertEquals(Path.of("ejemplos").toAbsolutePath().toFile(), v.carpetaInicial());
+
+        Path archivo = dir.resolve("a.ada");
+        Files.writeString(archivo, "procedure P is begin null; end P;");
+        v.getEditor().abrir(archivo);
+        assertEquals(dir.toAbsolutePath().toFile(), v.carpetaInicial());
     }
 }

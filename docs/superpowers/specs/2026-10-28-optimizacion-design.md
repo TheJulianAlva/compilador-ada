@@ -22,7 +22,7 @@ el mismo comportamiento que el original.
 2. **Plegado de constantes** sobre expresiones aritméticas.
 3. **Reducción de potencia** (*strength reduction*) sobre expresiones
    aritméticas.
-4. Nueva pestaña **Optimizado** con original y optimizado lado a lado.
+4. Nueva pestaña **Optimizado** con el código optimizado, en el panel derecho junto a la tabla de tokens; el original queda visible en el editor.
 5. Volcado a `output/codigo_optimizado.ada`.
 
 ## No objetivos
@@ -177,13 +177,10 @@ equivalente final).
 
 ## IDE
 
-- Nueva pestaña **"Optimizado"** en el panel inferior, junto a *Errores* y
-  *Código intermedio*.
-- Dos áreas de texto de solo lectura en un `JSplitPane` horizontal, con el
-  mismo resaltado de sintaxis Ada del editor: a la izquierda el fuente
-  original tal como está en el editor al compilar; a la derecha el
-  optimizado. Sin sincronía de desplazamiento (los textos tienen distinto
-  número de líneas) y sin resaltado de cambios.
+- Nueva pestaña **"Optimizado"** en el panel derecho, junto a *Tokens*
+  (el original queda a su izquierda, en el editor).
+- Un área de texto de solo lectura con el mismo resaltado de sintaxis Ada del
+  editor, sin resaltado de cambios.
 - Se rellena en cada `compilar()`; con errores previos muestra el aviso de
   omisión.
 - El volcado a `output/` se hace junto a los demás en `compilar()`.

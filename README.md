@@ -29,8 +29,9 @@ Solo corre si no hay errores previos; el contenido de `if`/`while`/`for` se
 ignora. El reporte también se guarda en `output/codigo_intermedio.txt` (menú **Compilar → Abrir carpeta output/** la abre en el explorador de archivos). Ejemplo:
 `ejemplos/codigo_intermedio.ada`.
 
-Con un programa sin errores, la pestaña **Optimizado** muestra el fuente original
-y el optimizado lado a lado (y se guarda en `output/codigo_optimizado.ada`). La
+Con un programa sin errores, la pestaña **Optimizado** (en el panel derecho,
+junto a la tabla de tokens) muestra el fuente optimizado, frente al original del
+editor (y se guarda en `output/codigo_optimizado.ada`). La
 optimización quita comentarios, líneas en blanco, indentación y espacios
 innecesarios, y aplica dos técnicas sobre expresiones aritméticas de todo el
 programa: **plegado de constantes** (`2 ** 5 + 3` → `35`) y **reducción de
