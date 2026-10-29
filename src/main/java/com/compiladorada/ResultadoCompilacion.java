@@ -3,6 +3,7 @@ package com.compiladorada;
 import com.compiladorada.errores.ErrorCompilacion;
 import com.compiladorada.intermedio.ResultadoIntermedio;
 import com.compiladorada.lexico.TokenLexico;
+import com.compiladorada.optimizacion.ResultadoOptimizacion;
 import com.compiladorada.sintactico.nodos.SimpleNode;
 
 import java.util.List;
@@ -13,13 +14,22 @@ public record ResultadoCompilacion(
         List<ErrorCompilacion> erroresSintacticos,
         List<ErrorCompilacion> erroresSemanticos,
         SimpleNode ast,
-        ResultadoIntermedio intermedio) {
+        ResultadoIntermedio intermedio,
+        ResultadoOptimizacion optimizacion) {
 
     /** Resultado sin fase de código intermedio (equivale a {@code intermedio == null}). */
     public ResultadoCompilacion(List<TokenLexico> tokens, List<ErrorCompilacion> erroresLexicos,
                                 List<ErrorCompilacion> erroresSintacticos,
                                 List<ErrorCompilacion> erroresSemanticos, SimpleNode ast) {
-        this(tokens, erroresLexicos, erroresSintacticos, erroresSemanticos, ast, null);
+        this(tokens, erroresLexicos, erroresSintacticos, erroresSemanticos, ast, null, null);
+    }
+
+    /** Resultado sin fase de optimización (equivale a {@code optimizacion == null}). */
+    public ResultadoCompilacion(List<TokenLexico> tokens, List<ErrorCompilacion> erroresLexicos,
+                                List<ErrorCompilacion> erroresSintacticos,
+                                List<ErrorCompilacion> erroresSemanticos, SimpleNode ast,
+                                ResultadoIntermedio intermedio) {
+        this(tokens, erroresLexicos, erroresSintacticos, erroresSemanticos, ast, intermedio, null);
     }
 
     public boolean tieneErrores() {
@@ -52,6 +62,15 @@ public record ResultadoCompilacion(
      * secuenciales; en ese caso {@link #intermedio()} es {@code null}.
      */
     public boolean intermedioOmitido() {
+        return tieneErrores();
+    }
+
+    /**
+     * {@code true} si la optimización NO se ejecutó por haber errores léxicos,
+     * sintácticos o semánticos; en ese caso {@link #optimizacion()} es
+     * {@code null}.
+     */
+    public boolean optimizacionOmitida() {
         return tieneErrores();
     }
 }

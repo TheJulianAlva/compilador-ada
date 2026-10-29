@@ -4,6 +4,7 @@ import com.compiladorada.Compilador;
 import com.compiladorada.ResultadoCompilacion;
 import com.compiladorada.errores.EscritorErrores;
 import com.compiladorada.intermedio.EscritorIntermedio;
+import com.compiladorada.optimizacion.EscritorOptimizacion;
 
 import javax.swing.JFrame;
 import javax.swing.JMenu;
@@ -38,6 +39,7 @@ public class VentanaPrincipal extends JFrame {
     private final TablaTokensPanel tablaTokens = new TablaTokensPanel();
     private final PanelErrores panelErrores = new PanelErrores();
     private final PanelIntermedio panelIntermedio = new PanelIntermedio();
+    private final PanelOptimizado panelOptimizado = new PanelOptimizado();
     private final JTabbedPane panelInferior = new JTabbedPane();
     private final BarraEstado barraEstado = new BarraEstado();
     private Path directorioSalida = Path.of("output");
@@ -53,6 +55,7 @@ public class VentanaPrincipal extends JFrame {
         arriba.setResizeWeight(0.62);
         panelInferior.addTab("Errores", panelErrores);
         panelInferior.addTab("Código intermedio", panelIntermedio);
+        panelInferior.addTab("Optimizado", panelOptimizado);
         JSplitPane principal = new JSplitPane(JSplitPane.VERTICAL_SPLIT, arriba, panelInferior);
         principal.setResizeWeight(0.72);
 
@@ -109,7 +112,7 @@ public class VentanaPrincipal extends JFrame {
 
         JMenu ver = new JMenu("Ver");
         ver.add(item("Mostrar/ocultar tabla de tokens", e -> tablaTokens.setVisible(!tablaTokens.isVisible())));
-        ver.add(item("Mostrar/ocultar panel de errores y código intermedio",
+        ver.add(item("Mostrar/ocultar panel de errores, código intermedio y optimizado",
                 e -> panelInferior.setVisible(!panelInferior.isVisible())));
         barra.add(ver);
 
@@ -137,6 +140,7 @@ public class VentanaPrincipal extends JFrame {
         panelErrores.setErrores(r.erroresLexicos(), r.erroresSintacticos(), r.sintacticoOmitido(),
                 r.erroresSemanticos(), r.semanticoOmitido());
         panelIntermedio.setResultado(r.intermedio());
+        panelOptimizado.setResultado(r.optimizacion());
 
         Path fuenteSinGuardar = null;
         try {
@@ -147,6 +151,7 @@ public class VentanaPrincipal extends JFrame {
             }
             EscritorErrores.volcar(r, directorioSalida, nombre);
             EscritorIntermedio.volcar(r, directorioSalida);
+            EscritorOptimizacion.volcar(r, directorioSalida);
         } catch (IOException | UncheckedIOException e) {
             barraEstado.setResultado("No se pudo escribir en " + directorioSalida.toAbsolutePath());
             return;
@@ -246,6 +251,10 @@ public class VentanaPrincipal extends JFrame {
 
     public PanelIntermedio getPanelIntermedio() {
         return panelIntermedio;
+    }
+
+    public PanelOptimizado getPanelOptimizado() {
+        return panelOptimizado;
     }
 
     public BarraEstado getBarraEstado() {

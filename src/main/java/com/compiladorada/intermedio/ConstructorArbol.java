@@ -28,16 +28,16 @@ import java.util.function.Predicate;
  * nodo es exactamente un hijo y la estructura del árbol ya refleja la
  * precedencia.
  */
-final class ConstructorArbol {
+public final class ConstructorArbol {
 
     private final Predicate<String> variableNumerica;
 
     /** @param variableNumerica nombre (en minúsculas) → ¿es una variable/constante Integer o Float? */
-    ConstructorArbol(Predicate<String> variableNumerica) {
+    public ConstructorArbol(Predicate<String> variableNumerica) {
         this.variableNumerica = variableNumerica;
     }
 
-    ArbolExpresion construir(Node n) {
+    public ArbolExpresion construir(Node n) {
         if (n instanceof ASTLiteral) {
             return literal((LiteralAst) ((ASTLiteral) n).jjtGetValue());
         }

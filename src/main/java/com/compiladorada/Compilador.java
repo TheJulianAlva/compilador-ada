@@ -6,6 +6,8 @@ import com.compiladorada.generado.AdaParser;
 import com.compiladorada.intermedio.GeneradorIntermedio;
 import com.compiladorada.intermedio.ResultadoIntermedio;
 import com.compiladorada.lexico.AnalizadorLexico;
+import com.compiladorada.optimizacion.Optimizador;
+import com.compiladorada.optimizacion.ResultadoOptimizacion;
 import com.compiladorada.sintactico.nodos.SimpleNode;
 
 import java.io.StringReader;
@@ -66,12 +68,18 @@ public final class Compilador {
                 ? GeneradorIntermedio.generar(ast)
                 : null;
 
+        // Optimización: misma condición que el código intermedio.
+        ResultadoOptimizacion optimizacion = intermedio != null
+                ? Optimizador.optimizar(fuente, lexico.tokens(), ast)
+                : null;
+
         return new ResultadoCompilacion(
                 lexico.tokens(),
                 lexico.errores(),
                 List.copyOf(sintacticos),
                 List.copyOf(semanticos),
                 ast,
-                intermedio);
+                intermedio,
+                optimizacion);
     }
 }

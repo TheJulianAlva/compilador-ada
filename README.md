@@ -10,7 +10,7 @@ simplificada— el pipeline real de GNAT/GCC.
 
 ## Estado actual
 
-Etapa **léxica y sintáctica** con IDE:
+Etapas léxica, sintáctica, semántica, de código intermedio y de optimización, con IDE. Base léxico-sintáctica:
 
 - Editor con resaltado de sintaxis, números de línea e indicador `Ln, Col`.
 - Abrir y guardar archivos `.ada`.
@@ -29,8 +29,16 @@ Solo corre si no hay errores previos; el contenido de `if`/`while`/`for` se
 ignora. El reporte también se guarda en `output/codigo_intermedio.txt` (menú **Compilar → Abrir carpeta output/** la abre en el explorador de archivos). Ejemplo:
 `ejemplos/codigo_intermedio.ada`.
 
-Las siguientes unidades (optimización, objeto) se construyen sobre el mismo AST
-y tabla de símbolos.
+Con un programa sin errores, la pestaña **Optimizado** muestra el fuente original
+y el optimizado lado a lado (y se guarda en `output/codigo_optimizado.ada`). La
+optimización quita comentarios, líneas en blanco, indentación y espacios
+innecesarios, y aplica dos técnicas sobre expresiones aritméticas de todo el
+programa: **plegado de constantes** (`2 ** 5 + 3` → `35`) y **reducción de
+potencia** (`X ** 2` → `X * X`, `X * 2` → `X + X`, `X / 2.0` → `X * 0.5`).
+Ejemplo: `ejemplos/optimizacion.ada`.
+
+La siguiente unidad (código objeto) se construye sobre el mismo AST y tabla de
+símbolos.
 
 ## Stack
 
@@ -71,6 +79,7 @@ src/main/java/com/compiladorada/
   sintactico/                    AST y traducción de mensajes
   semantico/                     Tabla de símbolos, tipos y verificación
   intermedio/                    Código intermedio: prefijo, posfijo, cuádruplos, evaluación
+  optimizacion/                  Compactación, plegado de constantes y reducción de potencia
   errores/                       Modelo de errores y volcado a archivo
   ide/                           IDE Swing (editor, tablas, paneles)
   Compilador.java                Orquesta el análisis de una fuente

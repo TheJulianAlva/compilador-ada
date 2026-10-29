@@ -92,4 +92,31 @@ class VentanaPrincipalTest {
         assertEquals(0, v.getPanelIntermedio().getFilas());
         assertTrue(Files.readString(dir.resolve("codigo_intermedio.txt")).startsWith("Generación OMITIDA"));
     }
+
+    @Test
+    void compilar_llena_la_pestana_optimizado_y_escribe_el_archivo(@TempDir Path dir) throws Exception {
+        VentanaPrincipal v = new VentanaPrincipal();
+        v.setDirectorioSalida(dir);
+        String fuente = "procedure P is A : Integer := 2; B : Integer; begin B := A * 2; end P;";
+        v.getEditor().setTexto(fuente);
+
+        v.compilar();
+
+        assertEquals(fuente, v.getPanelOptimizado().getOriginal());
+        assertEquals("procedure P is\nA:Integer:=2;\nB:Integer;\nbegin\nB:=A+A;\nend P;",
+                v.getPanelOptimizado().getOptimizado());
+        assertTrue(Files.readString(dir.resolve("codigo_optimizado.ada")).contains("B:=A+A;"));
+    }
+
+    @Test
+    void con_errores_la_pestana_optimizado_avisa_y_el_archivo_lo_indica(@TempDir Path dir) throws Exception {
+        VentanaPrincipal v = new VentanaPrincipal();
+        v.setDirectorioSalida(dir);
+        v.getEditor().setTexto("procedure P is X : Integer begin null; end;");
+
+        v.compilar();
+
+        assertTrue(v.getPanelOptimizado().getOptimizado().startsWith("Optimización no ejecutada"));
+        assertTrue(Files.readString(dir.resolve("codigo_optimizado.ada")).startsWith("Optimización OMITIDA"));
+    }
 }
