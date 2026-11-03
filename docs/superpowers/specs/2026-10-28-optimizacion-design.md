@@ -10,8 +10,9 @@ retornos de carro innecesarios, y aplicar una técnica de optimización a un
 tipo de instrucción. El resultado que importa es **el código fuente Ada ya
 optimizado**, que se muestra junto al original para exponerlo y revisarlo.
 
-Debe verse sobrio: dos textos lado a lado, sin resaltado de cambios y sin
-notas que expliquen qué técnica se aplicó. Lo único que se pide es que
+Debe verse sobrio: el código optimizado junto al editor (que ya muestra el
+original), sin resaltado de cambios y sin notas que expliquen qué técnica se
+aplicó. Lo único que se pide es que
 **funcione a la perfección**: el código optimizado debe ser Ada válido, con
 el mismo comportamiento que el original.
 
@@ -200,7 +201,7 @@ equivalente final).
   - los valores finales del procedimiento principal calculados por la fase
     intermedia coinciden antes y después de optimizar;
   - un programa con errores no produce optimización.
-- **IDE:** tras `compilar()`, la pestaña muestra original y optimizado; con
+- **IDE:** tras `compilar()`, la pestaña *Optimizado* muestra el código optimizado y *Código intermedio* el selector con la validación; con
   errores muestra la omisión.
 
 ## Validación con el código intermedio

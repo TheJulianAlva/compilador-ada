@@ -90,3 +90,8 @@ omitió). Se agrega un `intermedioOmitido()` análogo a `semanticoOmitido()`.
   prefijo, posfijo y resultado final.
 - La pestaña del IDE es maestro-detalle (lista de expresiones + tabla de la
   seleccionada).
+
+## Actualizaciones posteriores
+
+- **Cuádruplos por expresión (2026-10-20).** Cada expresión muestra sus cuádruplos paso a paso, sin asignaciones, y se quitaron los encabezados del reporte.
+- **Selector Original / Optimizado (2026-11-03).** La pestaña *Código intermedio* también muestra el código intermedio del fuente optimizado y, al pie, la validación de que los valores finales coinciden con los del original. Ver `docs/superpowers/specs/2026-10-28-optimizacion-design.md`.

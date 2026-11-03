@@ -105,10 +105,10 @@
 - Test: `src/test/java/com/compiladorada/ide/PanelesTest.java` (añadir), `src/test/java/com/compiladorada/ide/VentanaPrincipalTest.java` (añadir)
 
 **Interfaces:**
-- Produces: `EscritorOptimizacion.ARCHIVO = "codigo_optimizado.ada"`, `volcar(ResultadoCompilacion, Path)` (si omitido escribe `Optimización OMITIDA: ...`); `PanelOptimizado.setResultado(ResultadoOptimizacion)` (`null` = omitido), `getOriginal()`, `getOptimizado()`; `VentanaPrincipal.getPanelOptimizado()`.
+- Produces: `EscritorOptimizacion.ARCHIVO = "codigo_optimizado.ada"`, `volcar(ResultadoCompilacion, Path)` (si omitido escribe `Optimización OMITIDA: ...`); `PanelOptimizado.setResultado(ResultadoOptimizacion)` (`null` = omitido), `getOptimizado()`; `VentanaPrincipal.getPanelOptimizado()`.
 
 - [ ] **Step 1:** Tests: tras `compilar()` con `A * 2` el panel muestra original y `A+A` en optimizado y existe `codigo_optimizado.ada`; con error, panel con aviso y archivo que empieza con `Optimización OMITIDA`.
-- [ ] **Step 2:** Ver fallar. **Step 3:** Implementar `PanelOptimizado` con dos `RSyntaxTextArea` de solo lectura en `JSplitPane` horizontal (mismo `text/ada`, números de línea) y añadir la pestaña "Optimizado" y el volcado en `compilar()`. **Step 4:** Pasar.
+- [ ] **Step 2:** Ver fallar. **Step 3:** Implementar `PanelOptimizado` con un `RSyntaxTextArea` de solo lectura (mismo `text/ada`, números de línea) y añadir la pestaña "Optimizado" en el panel derecho, junto a *Tokens*, y el volcado en `compilar()`. **Step 4:** Pasar.
 
 ### Task 7: Ejemplo, README y commit final
 
@@ -120,3 +120,10 @@
 - [ ] **Step 2:** README: estado y estructura (`optimizacion/`).
 - [ ] **Step 3:** `mvn -q test` completo en verde.
 - [ ] **Step 4:** Un único commit con plan, código, pruebas, ejemplo y README; **sin** línea `Co-Authored-By`.
+
+---
+
+## Cambios posteriores a este plan
+
+- **Pestaña Optimizado.** Se simplificó: solo el código optimizado (el original ya está en el editor), en el panel derecho junto a *Tokens*. Los diálogos de abrir/guardar arrancan en la carpeta del archivo actual o en `ejemplos/`.
+- **Validación con el código intermedio (2026-11-03).** `Compilador` genera también el código intermedio del texto optimizado (sin volver a optimizarlo) y `Validacion` compara los valores finales con los del original. `ResultadoOptimizacion` pasa a `(original, optimizado, intermedio, validacion)`. La pestaña *Código intermedio* gana un selector *Original / Optimizado* y `EscritorOptimizacion` también escribe `codigo_intermedio_optimizado.txt`.

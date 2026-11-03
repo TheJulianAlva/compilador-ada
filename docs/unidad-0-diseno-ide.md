@@ -3,7 +3,12 @@
 **Materia:** Lenguajes y Autómatas II (SCD-1016)
 **Entregable:** Analizador léxico y sintáctico (IDE)
 **Rama de referencia:** `main` (front-end fusionado)
-**Fecha:** 2026-09-06
+**Fecha:** 2026-09-06 · **Actualizado:** 2026-11-03
+
+> **Nota de actualización (2026-11-03).** Las secciones 1–5 describen el diseño
+> del front-end léxico-sintáctico tal como se entregó en la Unidad 0. Las
+> secciones 2.4, 6, 7, 8.2 y 9.2 se actualizaron para reflejar el proyecto
+> actual, que añadió análisis semántico, código intermedio y optimización.
 
 Este documento describe **lo que realmente se construyó** en la Unidad 0: el
 front-end del compilador para el subconjunto de Ada del proyecto (analizador
@@ -143,6 +148,12 @@ devuelve `true`. El IDE lo refleja: la pestaña *Sintácticos* muestra
 `(omitido)` con un aviso, `output/errores_sintacticos.txt` dice
 `Análisis sintáctico OMITIDO`, y la barra de estado indica cuántos errores
 léxicos quedan por corregir.
+
+Las fases posteriores siguen la misma regla: el análisis semántico solo cuenta
+si no hubo errores léxicos ni sintácticos; el código intermedio y la
+optimización solo se generan con un programa sin errores en ninguna de las
+fases anteriores (`ResultadoCompilacion.semanticoOmitido()`,
+`intermedioOmitido()`, `optimizacionOmitida()`).
 
 Es el modelo clásico de fases del curso: no se avanza a la fase *n+1* mientras la
 fase *n* tenga errores. Dentro de **cada** fase sí se reportan todos los errores
@@ -600,7 +611,8 @@ faltan no se reportan hasta que se corrijan `contador_` y `@` y se recompile.
 com.compiladorada                        ← MOTOR (sin dependencias de Swing)
 │
 ├── Compilador                  fachada estática: analizar(fuente, nombre) → ResultadoCompilacion
-├── ResultadoCompilacion        record: tokens, erroresLexicos, erroresSintacticos, ast
+├── ResultadoCompilacion        record: tokens, erroresLexicos, erroresSintacticos, erroresSemanticos,
+│                                       ast, intermedio, optimizacion
 │
 ├── lexico/
 │   ├── AnalizadorLexico        recorrido léxico dedicado → List<TokenLexico> + List<ErrorCompilacion>
@@ -614,11 +626,22 @@ com.compiladorada                        ← MOTOR (sin dependencias de Swing)
 │   ├── TraductorMensajes       ParseException → mensaje en español con nombres amigables
 │   └── nodos/                  SimpleNode + nodos AST generados por JJTree (paquete nodePackage)
 │
+├── semantico/                  tabla de símbolos con ámbitos (Ambito, Simbolo), modelo de tipos (TipoAda),
+│   │                           VerificadorSemantico (núcleo de reglas) y mensajes en español;
+│   │                           valores que los nodos del AST guardan (NombreAst, LiteralAst, …)
+│   └── visitor/                Implementación B: RecolectorDeclaraciones + VerificadorUsos (dos pasadas)
+│
+├── intermedio/                 código intermedio aritmético: ArbolExpresion, Notaciones (prefijo/posfijo),
+│                               GeneradorCuadruplos, Evaluador, GeneradorIntermedio → ResultadoIntermedio
+│
+├── optimizacion/               Optimizador (recorrido del AST con ámbitos), Compactador, Impresor,
+│                               PlegadorConstantes, ReductorPotencia, Validacion → ResultadoOptimizacion
+│
 ├── errores/
-│   ├── ErrorCompilacion        record { categoria (LEXICO|SINTACTICO), linea, columna, mensaje };
+│   ├── ErrorCompilacion        record { categoria (LEXICO|SINTACTICO|SEMANTICO), linea, columna, mensaje };
 │   │                                   formatear(nombre) → "archivo:linea:columna: categoria: mensaje"
-│   └── EscritorErrores         vuelca ResultadoCompilacion a {tokens,errores_lexicos,errores_sintacticos}.txt
-│                               en la carpeta de salida que le pasa VentanaPrincipal (por defecto output/)
+│   └── EscritorErrores         vuelca tokens y errores léxicos/sintácticos a {tokens,errores_lexicos,
+│                               errores_sintacticos}.txt en la carpeta de salida (por defecto output/)
 │
 └── generado/                   AdaParser, AdaParserTokenManager, Token, ParseException, … (JavaCC/JJTree)
 
@@ -630,7 +653,10 @@ com.compiladorada.ide                     ← IDE (Swing + RSyntaxTextArea 3.5.4
 ├── AdaTokenMaker               TokenMaker de RSyntaxTextArea para el resaltado de Ada
 ├── BarraEstado                 JPanel sur: "Ln x, Col y" (oeste) + resultado de compilación (este)
 ├── TablaTokensPanel            JTable no editable con AbstractTableModel sobre List<TokenLexico>
-└── PanelErrores                JTabbedPane: pestaña "Léxicos (n)" / "Sintácticos (m)", doble clic → irA(linea,col)
+├── PanelErrores                JTabbedPane: "Léxicos (n)" / "Sintácticos (m)" / "Semánticos (k)", doble clic → irA(linea,col)
+├── PanelIntermedio             selector Original/Optimizado; lista de expresiones, cuádruplos, prefijo, posfijo,
+│                               valores finales y la validación
+└── PanelOptimizado             RSyntaxTextArea de solo lectura con el código optimizado
 ```
 
 ### 6.2 Responsabilidad de cada clase
@@ -639,11 +665,17 @@ com.compiladorada.ide                     ← IDE (Swing + RSyntaxTextArea 3.5.4
 
 - **`Compilador`** — fachada. Único punto de entrada del IDE al motor. Método
   estático `analizar(String fuente, String nombreArchivo) → ResultadoCompilacion`.
-  Ejecuta el recorrido léxico dedicado y el parseo, captura **cualquier**
-  `Throwable` del parser (incluido el corte por tope de 200) y devuelve siempre
-  un `ResultadoCompilacion` con lo acumulado. **Nunca lanza.**
-- **`ResultadoCompilacion`** — record inmutable con las cuatro salidas; helper
-  `tieneErrores()`.
+  Ejecuta el recorrido léxico dedicado y el parseo (el análisis semántico va
+  embebido en el parseo), captura **cualquier** `Throwable` del parser (incluido
+  el corte por tope de 200) y, si el programa no tiene errores, genera el código
+  intermedio, optimiza el fuente y genera también el código intermedio del
+  texto optimizado para validarlo contra el del original. Devuelve siempre un
+  `ResultadoCompilacion` con lo acumulado. **Nunca lanza** por errores del
+  programa analizado.
+- **`ResultadoCompilacion`** — record inmutable con las siete salidas (tokens,
+  errores por fase, AST, código intermedio y optimización); helpers
+  `tieneErrores()`, `sintacticoOmitido()`, `semanticoOmitido()`,
+  `intermedioOmitido()` y `optimizacionOmitida()`.
 - **`AnalizadorLexico`** — instancia el `AdaParserTokenManager` generado y lo
   recorre token a token; recoge comentarios (`specialToken`), clasifica cada
   token en un `TipoToken` y genera un `ErrorCompilacion` léxico por cada token de
@@ -654,9 +686,23 @@ com.compiladorada.ide                     ← IDE (Swing + RSyntaxTextArea 3.5.4
 - **`ErrorCompilacion`** — modelo de error con categoría, posición y mensaje;
   `formatear` produce la línea estilo GCC.
 - **`EscritorErrores`** — serializa `ResultadoCompilacion` a los tres archivos
-  `.txt` dentro del directorio de salida que recibe como parámetro (por defecto
-  `output/`, fijado en `VentanaPrincipal`): cabecera con fecha ISO + total, luego
-  una línea por entrada.
+  `.txt` de tokens y errores léxicos/sintácticos dentro del directorio de salida
+  que recibe como parámetro (por defecto `output/`, fijado en
+  `VentanaPrincipal`): cabecera con fecha ISO + total, luego una línea por
+  entrada. Los errores semánticos solo se muestran en el panel.
+- **`VerificadorSemantico`, `Ambito`, `Simbolo`, `TipoAda`** — núcleo del
+  análisis semántico: ámbitos anidados, símbolos, modelo de tipos y reglas de
+  verificación, compartidos por las dos implementaciones (acciones embebidas en
+  `Ada.jjt` y visitor de dos pasadas en `semantico/visitor/`). Ver
+  `docs/superpowers/specs/2026-09-20-analisis-semantico-design.md`.
+- **`GeneradorIntermedio` y su paquete** — recorre el procedimiento principal y,
+  para cada expresión aritmética, produce prefijo, posfijo, cuádruplos y valor
+  evaluado con una memoria de variables. Ver
+  `docs/superpowers/specs/2026-10-13-codigo-intermedio-design.md`.
+- **`Optimizador` y su paquete** — compacta el fuente, pliega constantes y
+  reduce potencia sobre todo el programa; `Validacion` compara los valores
+  finales del intermedio del original y del optimizado. Ver
+  `docs/superpowers/specs/2026-10-28-optimizacion-design.md`.
 - **`TraductorMensajes`** — aislado del parser generado; convierte
   `ParseException` a español.
 - **`AdaParser`** (generado desde `Ada.jjt`) — parser + lógica de recuperación
@@ -675,8 +721,9 @@ com.compiladorada.ide                     ← IDE (Swing + RSyntaxTextArea 3.5.4
 - **`AdaTokenMaker`** — `AbstractTokenMaker`: colorea palabras reservadas
   (vía `PalabrasReservadas.TODAS`), comentarios `--`, cadenas, literales de
   carácter y números. Es un lexer mínimo independiente del de la gramática.
-- **`BarraEstado`, `TablaTokensPanel`, `PanelErrores`** — vistas pasivas; reciben
-  datos vía setters y exponen getters para las pruebas.
+- **`BarraEstado`, `TablaTokensPanel`, `PanelErrores`, `PanelIntermedio`,
+  `PanelOptimizado`** — vistas pasivas; reciben datos vía setters y exponen
+  getters para las pruebas.
 
 ### 6.3 El papel de la fachada `Compilador`
 
@@ -685,9 +732,10 @@ com.compiladorada.ide                     ← IDE (Swing + RSyntaxTextArea 3.5.4
 construye un `AdaParser`. Ventajas:
 
 - El IDE no necesita saber que hay JavaCC detrás.
-- El contrato `analizar(fuente, nombre) → ResultadoCompilacion` no cambia entre
-  unidades: la Unidad 1 añadirá `erroresSemanticos()` y una tabla de símbolos al
-  `ResultadoCompilacion` sin tocar el IDE.
+- El contrato `analizar(fuente, nombre) → ResultadoCompilacion` no cambió entre
+  unidades: el semántico añadió `erroresSemanticos()`, el intermedio añadió
+  `intermedio()` y la optimización añadió `optimizacion()` al
+  `ResultadoCompilacion`, y el IDE solo ganó vistas nuevas.
 - `Compilador` absorbe toda excepción: el IDE nunca tiene que envolver
   `compilar()` en un `try/catch` de errores del parser.
 
@@ -695,7 +743,9 @@ Flujo de datos, un solo sentido:
 `EditorPanel.getTexto()` → `VentanaPrincipal.compilar()` →
 `Compilador.analizar(...)` → `ResultadoCompilacion` →
 `TablaTokensPanel.setTokens()` + `PanelErrores.setErrores()` +
-`EscritorErrores.volcar(...)` + `BarraEstado.setResultado()`.
+`PanelIntermedio.setResultados()` + `PanelOptimizado.setResultado()` +
+`EscritorErrores` / `EscritorIntermedio` / `EscritorOptimizacion` +
+`BarraEstado.setResultado()`.
 
 ---
 
@@ -707,27 +757,30 @@ Flujo de datos, un solo sentido:
 anidados y una barra de estado al sur:
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│ Archivo   Editar   Compilar   Ver   Ayuda        (JMenuBar)  │
-├───────────────────────────────┬─────────────────────────────┤
-│                               │  Token │ Tipo │ Línea │ Col  │
-│  Editor                       │  ──────┼──────┼───────┼───── │
-│  (RSyntaxTextArea + gutter    │  ...   │ ...  │ ...   │ ...  │
-│   de números de línea,        │       (TablaTokensPanel,     │
-│   resaltado de Ada)           │        JTable ordenable)     │
-├───────────────────────────────┴─────────────────────────────┤
-│  [ Léxicos (n) | Sintácticos (m) ]              (PanelErrores)│
-│  Ln:Col │ Mensaje                                            │
-│  ...    │ ...            (JTable; doble clic → salta al error)│
-├─────────────────────────────────────────────────────────────┤
-│  Ln 12, Col 8                    Compilado: 0 léxicos, ...   │  BarraEstado
-└─────────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────────┐
+│ Archivo   Editar   Compilar   Ver   Ayuda            (JMenuBar)   │
+├────────────────────────────────┬─────────────────────────────────┤
+│                                │ [ Tokens | Optimizado ]         │
+│  Editor                        │ Token │ Tipo │ Línea │ Col      │
+│  (RSyntaxTextArea + gutter     │ ...   │ ...  │ ...   │ ...      │
+│   de números de línea,         │ (TablaTokensPanel) o, en la     │
+│   resaltado de Ada)            │ otra pestaña, el código         │
+│                                │ optimizado (PanelOptimizado)    │
+├────────────────────────────────┴─────────────────────────────────┤
+│ [ Errores | Código intermedio ]                                   │
+│ Errores:  [ Léxicos (n) | Sintácticos (m) | Semánticos (k) ]      │
+│ Intermedio: selector Original/Optimizado, expresiones, cuádruplos,│
+│             prefijo, posfijo, valores finales y validación        │
+├──────────────────────────────────────────────────────────────────┤
+│ Ln 12, Col 8                  Compilado: 0 léxicos, ...           │ BarraEstado
+└──────────────────────────────────────────────────────────────────┘
 ```
 
-- `JSplitPane` horizontal (`resizeWeight = 0.62`): editor a la izquierda, tabla
-  de tokens a la derecha.
-- `JSplitPane` vertical (`resizeWeight = 0.72`): lo anterior arriba, panel de
-  errores abajo.
+- `JSplitPane` horizontal (`resizeWeight = 0.62`): editor a la izquierda y, a la
+  derecha, un `JTabbedPane` con la tabla de tokens y el código optimizado. El
+  original es el que está en el editor.
+- `JSplitPane` vertical (`resizeWeight = 0.72`): lo anterior arriba y, abajo, un
+  `JTabbedPane` con el panel de errores y el de código intermedio.
 - `BarraEstado` al sur: `Ln x, Col y` al oeste (actualizado por un
   `CaretListener` en **cada** movimiento del cursor, no solo al compilar) y el
   resultado de la última compilación al este.
@@ -739,12 +792,14 @@ anidados y una barra de estado al sur:
 | **Archivo** | Nuevo · Abrir… · Guardar · Guardar como… · —— · Salir |
 | **Editar** | Deshacer · Rehacer · —— · Cortar · Copiar · Pegar |
 | **Compilar** | Compilar (**F5**) · —— · Abrir carpeta `output/` |
-| **Ver** | Mostrar/ocultar tabla de tokens · Mostrar/ocultar panel de errores |
+| **Ver** | Mostrar/ocultar tabla de tokens y optimizado · Mostrar/ocultar panel de errores y código intermedio |
 | **Ayuda** | Acerca de… |
 
 No hay `JToolBar`. "Compilar" lleva acelerador `F5`
 (`KeyStroke.getKeyStroke(KeyEvent.VK_F5, 0)`) activo sin abrir el menú. Abrir y
-Guardar como usan `JFileChooser`.
+Guardar como usan `JFileChooser`, que arranca en la carpeta del archivo abierto
+o, si no hay, en `ejemplos/` del proyecto (o en la carpeta desde donde se ejecuta
+el IDE si no existe), igual en Linux y Windows.
 
 ### 7.3 Flujo "Compilar" (menú Compilar o F5)
 
@@ -753,16 +808,21 @@ Guardar como usan `JFileChooser`.
 1. Toma `editor.getTexto()` y `editor.getNombreArchivo()` (este devuelve
    `fuente_sin_guardar.ada` si el editor no tiene archivo asociado).
 2. `ResultadoCompilacion r = Compilador.analizar(fuente, nombre)` — síncrono.
-3. `tablaTokens.setTokens(r.tokens())` y
-   `panelErrores.setErrores(r.erroresLexicos(), r.erroresSintacticos())`
-   (actualiza los contadores de las pestañas).
+3. `tablaTokens.setTokens(r.tokens())`,
+   `panelErrores.setErrores(...)` (léxicos, sintácticos y semánticos, con el
+   aviso de fase omitida; actualiza los contadores de las pestañas),
+   `panelIntermedio.setResultados(r.intermedio(), r.optimizacion())` y
+   `panelOptimizado.setResultado(r.optimizacion())`.
 4. Crea `output/` si no existe. Si el editor no tiene ruta, escribe el texto en
    `output/fuente_sin_guardar.ada`.
-5. `EscritorErrores.volcar(r, output/, nombre)` — sobrescribe por completo
-   `tokens.txt`, `errores_lexicos.txt`, `errores_sintacticos.txt`.
-6. `barraEstado.setResultado("Compilado: n léxicos, m sintácticos — <ruta
-   absoluta de output/> actualizado")`, más una nota si se guardó la fuente sin
-   guardar.
+5. Vuelca a `output/`: `EscritorErrores.volcar` (`tokens.txt`,
+   `errores_lexicos.txt`, `errores_sintacticos.txt`),
+   `EscritorIntermedio.volcar` (`codigo_intermedio.txt`) y
+   `EscritorOptimizacion.volcar` (`codigo_optimizado.ada` y
+   `codigo_intermedio_optimizado.txt`); todos se sobrescriben por completo.
+6. `barraEstado.setResultado("Compilado: n léxicos, m sintácticos, k semánticos —
+   <ruta absoluta de output/> actualizado")`, o el aviso de la fase que se omitió,
+   más una nota si se guardó la fuente sin guardar.
 7. Si falla la escritura en disco, la barra de estado muestra
    `No se pudo escribir en <ruta>` y no se detiene la aplicación.
 
@@ -779,6 +839,9 @@ con `setDirectorioSalida`). Se **sobrescriben completos** en cada compilación.
 | `tokens.txt` | cabecera (`== TABLA DE TOKENS ==`, fecha ISO, total) + tabla de columnas alineadas: `LEXEMA` (recortado a 24, con `\n`/`\t` escapados) · `TIPO` · `LINEA` · `COLUMNA` |
 | `errores_lexicos.txt` | cabecera (`== ERRORES LÉXICOS ==`, fecha ISO, total) + una línea por error, o `Sin errores.` |
 | `errores_sintacticos.txt` | ídem con `== ERRORES SINTÁCTICOS ==` |
+| `codigo_intermedio.txt` | reporte del código intermedio del fuente original: por expresión, cuádruplos, prefijo, posfijo y valor; métodos usados y valores finales (o `Generación OMITIDA` si hay errores) |
+| `codigo_optimizado.ada` | el fuente optimizado (o `Optimización OMITIDA` si hay errores) |
+| `codigo_intermedio_optimizado.txt` | el mismo reporte sobre el código optimizado, terminado con la línea de validación contra el original |
 | `fuente_sin_guardar.ada` | solo si el editor no tiene archivo: copia del texto compilado |
 
 Formato de cada línea de error (estilo GCC/GNAT), producido por
@@ -807,6 +870,10 @@ mi_programa.ada:3:1: error sintáctico: se esperaba ':=' o ';' pero se encontró
 > **[Captura pendiente: tabla de tokens poblada tras compilar]** — `docs/img/02-tabla-tokens.png`
 
 > **[Captura pendiente: panel de errores con múltiples errores léxicos y sintácticos]** — `docs/img/03-panel-errores.png`
+
+> **[Captura pendiente: pestaña Código intermedio con el selector Original/Optimizado y la validación]** — `docs/img/04-codigo-intermedio.png`
+
+> **[Captura pendiente: pestaña Optimizado junto al editor]** — `docs/img/05-optimizado.png`
 
 ---
 
@@ -850,36 +917,59 @@ presente):
 | `09_loop_sin_end.ada` | `5:5` — `loop` sin `end loop;` | SINTÁCTICO | presente ✔ |
 | `10_errores_lexicos_bloquean_sintactico.ada` | `5:4` y `5:29` — dos errores léxicos; los `;` faltantes **no** se reportan | LÉXICO | los 2 presentes; 0 sintácticos ✔ |
 
+Desde entonces se añadió `11_palabra_clave_unidad_mal_escrita.ada` (una palabra
+clave de unidad mal escrita, p. ej. `procedue`) y la carpeta
+`casos/semanticos/` (6 programas válidos y 10 inválidos con su `.expected`),
+ejercitada por `CasosSemanticosTest`.
+
 El caso 08 valida la **recuperación sintáctica** (varios errores en una pasada);
 el caso 10 valida el **gating de fases** (con errores léxicos, el parser no
 corre y su `errores_sintacticos.txt` dice `OMITIDO`).
 
 ### 8.2 Conteo total de tests
 
-`mvn -q test` → **121 tests, 0 fallos, 0 errores** (agregado de
-`target/surefire-reports/`). Desglose por clase:
+`mvn -q test` → **271 tests, 0 fallos, 0 errores** (agregado de
+`target/surefire-reports/`, a 2026-11-03). Desglose por clase:
 
 | Clase de test | Tests | Cubre |
 |---|---:|---|
-| `com.compiladorada.CasosDePruebaTest` | 19 | batería `.ada` válidos (9) + inválidos (10), `@TestFactory` |
-| `com.compiladorada.CompiladorTest` | 5 | fachada: nunca lanza, AST presente/ausente, léxico bloquea sintáctico |
+| `com.compiladorada.CasosDePruebaTest` | 20 | batería `.ada` válidos e inválidos (léxicos y sintácticos), `@TestFactory` |
+| `com.compiladorada.CompiladorTest` | 9 | fachada: nunca lanza, AST presente/ausente, fases secuenciales, intermedio y optimización |
 | `com.compiladorada.ModeloDatosTest` | 5 | records `TokenLexico`, `ErrorCompilacion`, `ResultadoCompilacion` |
+| `com.compiladorada.errores.ErrorCompilacionTest` | 1 | formato de la línea de error |
 | `com.compiladorada.errores.EscritorErroresTest` | 4 | formato de línea, cabecera, sobrescritura, aviso de sintáctico omitido |
-| `com.compiladorada.lexico.AnalizadorLexicoTest` | 11 | clasificación de tokens, `_` en enteros, `LEXEMA_INVALIDO`, comentarios, posiciones, guarda de rangos |
+| `com.compiladorada.ide.AdaTokenMakerTest` | 6 | resaltado: palabras reservadas, comentarios, cadenas, números |
+| `com.compiladorada.ide.EditorPanelTest` | 6 | nuevo/abrir/guardar, flag modificado |
+| `com.compiladorada.ide.PanelesTest` | 11 | `TablaTokensPanel`, `PanelErrores`, `BarraEstado`, paneles intermedio y optimizado |
+| `com.compiladorada.ide.VentanaPrincipalTest` | 11 | flujo `compilar()`, `output/`, pestañas, selector, carpeta inicial |
+| `com.compiladorada.intermedio.EvaluadorTest` | 5 | evaluación con Integer de 32 bits y Float, errores de ejecución |
+| `com.compiladorada.intermedio.GeneradorIntermedioTest` | 12 | cuádruplos, memoria de variables, filas por expresión |
+| `com.compiladorada.intermedio.NotacionesTest` | 7 | prefijo y posfijo |
+| `com.compiladorada.lexico.AnalizadorLexicoTest` | 11 | clasificación de tokens, `_` en enteros, `LEXEMA_INVALIDO`, comentarios, posiciones |
 | `com.compiladorada.lexico.LexerHumoTest` | 5 | humo del `TokenManager` generado; `i@f` como un solo token |
 | `com.compiladorada.lexico.PalabrasReservadasTest` | 4 | 73 palabras, case-insensitive, tipos predefinidos no reservados |
 | `com.compiladorada.lexico.RecuperacionLexicaTest` | 6 | tokens trampa + catch-all |
+| `com.compiladorada.optimizacion.CompactadorTest` | 8 | espaciado mínimo, saltos de línea, cadenas, reemplazos |
+| `com.compiladorada.optimizacion.ImpresorTest` | 5 | paréntesis mínimos y reanálisis al mismo árbol (propiedad aleatoria) |
+| `com.compiladorada.optimizacion.OptimizadorTest` | 15 | optimización de programas, ámbitos, y propiedades sobre `ejemplos/` |
+| `com.compiladorada.optimizacion.TransformacionesTest` | 4 | plegado de constantes y reducción de potencia |
+| `com.compiladorada.optimizacion.ValidacionTest` | 3 | comparación de valores finales original/optimizado |
+| `com.compiladorada.semantico.AmbitoTest` | 6 | ámbitos anidados y búsqueda de símbolos |
+| `com.compiladorada.semantico.CasosSemanticosTest` | 16 | batería `casos/semanticos` (válidos e inválidos) |
+| `com.compiladorada.semantico.MensajesSemanticosTest` | 1 | mensajes semánticos en español |
+| `com.compiladorada.semantico.SimboloTest` | 1 | modelo de símbolo |
+| `com.compiladorada.semantico.TipoAdaTest` | 13 | modelo de tipos y compatibilidad |
+| `com.compiladorada.semantico.VerificadorSemanticoTest` | 24 | reglas de verificación semántica |
+| `com.compiladorada.semantico.visitor.ImplementacionBTest` | 6 | Implementación B (visitor de dos pasadas) = mismos errores que A |
+| `com.compiladorada.sintactico.AstExpresionesTest` | 3 | nodos del AST de expresiones |
+| `com.compiladorada.sintactico.AstTest` | 5 | nodos JJTree generados y posiciones |
+| `com.compiladorada.sintactico.GramaticaExpresionesTest` | 5 | precedencia, cortocircuito, pertenencia, `**` no asociativo |
+| `com.compiladorada.sintactico.GramaticaSentenciasTest` | 8 | `if`, `for`, `while`, asignación, llamada, `raise` |
 | `com.compiladorada.sintactico.GramaticaSubprogramasTest` | 6 | `procedure` / `function` / `package` |
 | `com.compiladorada.sintactico.GramaticaTiposTest` | 7 | `type`, `subtype`, `record`, `array`, enumerados |
-| `com.compiladorada.sintactico.GramaticaSentenciasTest` | 8 | `if`, `for`, `while`, asignación (incl. `A(i)` y `R.campo`), llamada, `raise` |
-| `com.compiladorada.sintactico.GramaticaExpresionesTest` | 5 | precedencia, cortocircuito, pertenencia, `**` no asociativo |
+| `com.compiladorada.sintactico.ImplementacionAEmbebidaTest` | 5 | análisis semántico con acciones embebidas (Implementación A) |
 | `com.compiladorada.sintactico.RecuperacionSintacticaTest` | 7 | modo pánico, errores fantasma, múltiples errores, basura final |
-| `com.compiladorada.sintactico.AstTest` | 5 | nodos JJTree generados y posiciones |
-| `com.compiladorada.ide.EditorPanelTest` | 6 | nuevo/abrir/guardar, flag modificado |
-| `com.compiladorada.ide.PanelesTest` | 8 | `TablaTokensPanel`, `PanelErrores` (incl. sintáctico omitido), `BarraEstado` |
-| `com.compiladorada.ide.VentanaPrincipalTest` | 4 | flujo `compilar()`, escritura de `output/`, gating léxico→sintáctico |
-| `com.compiladorada.ide.AdaTokenMakerTest` | 6 | resaltado: palabras reservadas, comentarios, cadenas, números |
-| **Total** | **121** | |
+| **Total** | **271** | |
 
 El IDE se prueba construyendo componentes Swing reales (no *mock*); la suite
 **no** es portable a un CI *headless* sin un servidor X virtual (ver sección 9).
@@ -932,32 +1022,26 @@ El IDE se prueba construyendo componentes Swing reales (no *mock*); la suite
   IDE las siga etiquetando como `PALABRA_RESERVADA`: es una divergencia conocida
   entre la tabla léxica y el parser.
 
-### 9.2 Conexión con la Unidad 1 (análisis semántico)
+### 9.2 Conexión con las unidades siguientes (estado actual)
 
-- **Punto de enganche: el AST JJTree.** La Unidad 1 recibe el `SimpleNode` raíz
-  (`Programa`) desde `ResultadoCompilacion.ast()`. Las opciones `VISITOR = true`
-  y `MULTI = true` ya generan la infraestructura de visitantes; el semántico
-  implementará uno o varios `AdaParserVisitor` que recorran el árbol.
-- **Nodos tipados.** Se sustituirán las subclases genéricas de `SimpleNode` por
-  clases con estado (tipo, ámbito, símbolo), añadiendo `NODE_CLASS` o código en
-  las producciones `#Nombre` del `.jjt`. Como el IDE solo habla con `Compilador`,
-  este cambio no lo afecta.
-- **Tabla de símbolos.** No existe todavía. La Unidad 1 la añadirá como una
-  estructura de ámbitos anidados poblada en un primer recorrido del AST
-  (declaraciones) y consultada en un segundo (usos), implementando la regla base:
-  *todo identificador declarado al menos una vez y con un solo tipo*. Se probará
-  con el mismo mecanismo de casos `.ada` + `.expected` de la sección 8. Ver
-  `docs/superpowers/specs/2026-09-20-analisis-semantico-design.md` para el
-  diseño completo (dos implementaciones: acciones embebidas en `Ada.jjt` y
-  visitor de dos pasadas sobre el AST).
-- **Ampliación de `ResultadoCompilacion`.** Se le añadirá `erroresSemanticos()` y
-  un acceso a la tabla de símbolos, manteniendo la firma
-  `Compilador.analizar(fuente, nombre)`. El `PanelErrores` del IDE ganará una
-  tercera pestaña sin más cambios estructurales.
-- **Hacia las Unidades 2–4.** El mismo AST anotado por el semántico alimenta la
-  generación de código intermedio (representación tipo GENERIC/GIMPLE
-  simplificada), la optimización (propagación de constantes, eliminación de
-  código muerto) y la generación de NASM, sin volver a analizar el texto fuente.
+El diseño de la Unidad 0 anticipaba cómo se apoyarían las siguientes unidades en
+el mismo front-end. Así quedó:
+
+- **Análisis semántico (Unidad 1) — hecho.** Se engancha al AST JJTree y a
+  `ResultadoCompilacion` (`erroresSemanticos()`), con tabla de símbolos de
+  ámbitos anidados y dos implementaciones de los mismos chequeos: acciones
+  embebidas en `Ada.jjt` y visitor de dos pasadas (`semantico/visitor/`). El
+  `PanelErrores` ganó la pestaña *Semánticos*. Ver
+  `docs/superpowers/specs/2026-09-20-analisis-semantico-design.md`.
+- **Código intermedio (Unidad 2) — hecho para expresiones aritméticas.**
+  Prefijo, posfijo, cuádruplos y evaluación sobre el AST, sin volver a analizar
+  el texto. Ver `docs/superpowers/specs/2026-10-13-codigo-intermedio-design.md`.
+- **Optimización (Unidad 3) — hecha.** Sobre el mismo fuente: compactación,
+  plegado de constantes y reducción de potencia; el código intermedio de ambas
+  versiones se genera para validar que dan los mismos resultados. Ver
+  `docs/superpowers/specs/2026-10-28-optimizacion-design.md`.
+- **Código objeto (Unidad 4) — pendiente.** Generación de NASM y empaquetado
+  con Launch4j.
 
 ### 9.3 Limitaciones conocidas de la Unidad 1 (análisis semántico)
 
