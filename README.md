@@ -38,6 +38,11 @@ programa: **plegado de constantes** (`2 ** 5 + 3` → `35`) y **reducción de
 potencia** (`X ** 2` → `X * X`, `X * 2` → `X + X`, `X / 2.0` → `X * 0.5`).
 Ejemplo: `ejemplos/optimizacion.ada`.
 
+Para validar la optimización, la pestaña **Código intermedio** tiene un selector
+**Original / Optimizado** que muestra el código intermedio de cada versión, y al
+pie indica si los valores finales de ambas coinciden. El del optimizado también
+se guarda, con esa validación, en `output/codigo_intermedio_optimizado.txt`.
+
 La siguiente unidad (código objeto) se construye sobre el mismo AST y tabla de
 símbolos.
 

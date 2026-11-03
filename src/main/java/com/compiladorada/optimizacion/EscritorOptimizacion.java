@@ -7,10 +7,14 @@ import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
-/** Vuelca el fuente optimizado a {@code codigo_optimizado.ada} (se sobrescribe en cada compilación). */
+/**
+ * Vuelca el fuente optimizado a {@code codigo_optimizado.ada} y su código intermedio con la
+ * validación a {@code codigo_intermedio_optimizado.txt} (se sobrescriben en cada compilación).
+ */
 public final class EscritorOptimizacion {
 
     public static final String ARCHIVO = "codigo_optimizado.ada";
+    public static final String ARCHIVO_INTERMEDIO = "codigo_intermedio_optimizado.txt";
 
     private EscritorOptimizacion() {
     }
@@ -20,9 +24,14 @@ public final class EscritorOptimizacion {
                 ? "Optimización OMITIDA: el programa tiene errores léxicos, "
                         + "sintácticos o semánticos pendientes.\n"
                 : r.optimizacion().optimizado() + "\n";
+        String intermedio = r.optimizacionOmitida() || r.optimizacion() == null || r.optimizacion().intermedio() == null
+                ? "Generación OMITIDA: el programa tiene errores léxicos, "
+                        + "sintácticos o semánticos pendientes.\n"
+                : r.optimizacion().intermedio().aTexto() + "\n" + r.optimizacion().validacion().texto() + "\n";
         try {
             Files.createDirectories(dirSalida);
             Files.writeString(dirSalida.resolve(ARCHIVO), contenido);
+            Files.writeString(dirSalida.resolve(ARCHIVO_INTERMEDIO), intermedio);
         } catch (IOException e) {
             throw new UncheckedIOException(e);
         }
