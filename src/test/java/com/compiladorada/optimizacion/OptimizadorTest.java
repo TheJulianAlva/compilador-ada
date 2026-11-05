@@ -100,11 +100,7 @@ class OptimizadorTest {
 
     /** Nombre, tipo y valor de cada variable (el motivo cita números de línea, que cambian al compactar). */
     private static List<String> valores(ResultadoCompilacion r) {
-        return valores(r.intermedio());
-    }
-
-    private static List<String> valores(com.compiladorada.intermedio.ResultadoIntermedio i) {
-        return i.valoresFinales().stream()
+        return r.intermedio().valoresFinales().stream()
                 .map((ValorFinal v) -> v.nombre() + ":" + v.tipo() + "=" + v.valor() + (v.motivo() != null ? " (sin valor)" : ""))
                 .toList();
     }
@@ -132,9 +128,6 @@ class OptimizadorTest {
         assertEquals(opt, r2.optimizacion().optimizado(), "no es idempotente: " + ejemplo);
 
         assertEquals(valores(r), valores(r2), "cambian los valores finales: " + ejemplo);
-        assertNotNull(r.optimizacion().intermedio(), ejemplo.toString());
-        assertEquals(valores(r2), valores(r.optimizacion().intermedio()), ejemplo.toString());
-        assertTrue(r.optimizacion().validacion().coincide(), r.optimizacion().validacion().texto());
         assertFalse(opt.replaceAll("\"[^\"\n]*\"", "\"\"").contains("--"), "queda un comentario en " + ejemplo);
         assertFalse(opt.contains("\n\n"), "queda una línea en blanco en " + ejemplo);
     }

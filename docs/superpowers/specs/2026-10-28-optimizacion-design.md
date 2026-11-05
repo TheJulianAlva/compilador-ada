@@ -201,23 +201,8 @@ equivalente final).
   - los valores finales del procedimiento principal calculados por la fase
     intermedia coinciden antes y después de optimizar;
   - un programa con errores no produce optimización.
-- **IDE:** tras `compilar()`, la pestaña *Optimizado* muestra el código optimizado y *Código intermedio* el selector con la validación; con
-  errores muestra la omisión.
-
-## Validación con el código intermedio
-
-Se genera el código intermedio del texto original y del optimizado, y se
-comparan sus valores finales (nombre, tipo y valor; de una variable sin valor
-solo que siga sin valor, porque el motivo cita líneas que cambian al compactar).
-
-- La pestaña **Código intermedio** gana un selector **Original / Optimizado**
-  que alterna todo su contenido; al pie de "Valores finales" se muestra el
-  veredicto (coinciden, o la lista de variables que difieren).
-- Las líneas `Ln N` del intermedio del optimizado se refieren al texto
-  compactado de la pestaña *Optimizado*, no al editor.
-- `output/codigo_intermedio_optimizado.txt` guarda el intermedio del optimizado
-  seguido del veredicto.
-- El texto optimizado se vuelve a analizar sin optimizarlo otra vez.
+- **IDE:** tras `compilar()`, la pestaña *Optimizado* muestra el código optimizado; con errores muestra la
+  omisión.
 
 ## Entregables extra
 

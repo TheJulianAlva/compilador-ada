@@ -141,7 +141,7 @@ public class VentanaPrincipal extends JFrame {
         tablaTokens.setTokens(r.tokens());
         panelErrores.setErrores(r.erroresLexicos(), r.erroresSintacticos(), r.sintacticoOmitido(),
                 r.erroresSemanticos(), r.semanticoOmitido());
-        panelIntermedio.setResultados(r.intermedio(), r.optimizacion());
+        panelIntermedio.setResultado(r.intermedio());
         panelOptimizado.setResultado(r.optimizacion());
 
         Path fuenteSinGuardar = null;

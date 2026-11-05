@@ -20,11 +20,6 @@ public final class Compilador {
     }
 
     public static ResultadoCompilacion analizar(String fuente, String nombreArchivo) {
-        return analizar(fuente, nombreArchivo, true);
-    }
-
-    /** @param optimizar si es {@code false} se omite la etapa de optimización (se usa al analizar el texto ya optimizado) */
-    private static ResultadoCompilacion analizar(String fuente, String nombreArchivo, boolean optimizar) {
         // nombreArchivo lo usa el IDE al volcar errores; el análisis no lo necesita.
         if (fuente == null) {
             fuente = "";
@@ -74,13 +69,9 @@ public final class Compilador {
                 : null;
 
         // Optimización: misma condición que el código intermedio.
-        ResultadoOptimizacion optimizacion = null;
-        if (optimizar && intermedio != null) {
-            optimizacion = Optimizador.optimizar(fuente, lexico.tokens(), ast);
-            // Se genera también el intermedio del texto optimizado, para validar que da los mismos resultados.
-            ResultadoCompilacion delOptimizado = analizar(optimizacion.optimizado(), nombreArchivo, false);
-            optimizacion = optimizacion.validar(intermedio, delOptimizado.intermedio());
-        }
+        ResultadoOptimizacion optimizacion = intermedio != null
+                ? Optimizador.optimizar(fuente, lexico.tokens(), ast)
+                : null;
 
         return new ResultadoCompilacion(
                 lexico.tokens(),

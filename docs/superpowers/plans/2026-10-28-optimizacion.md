@@ -126,4 +126,3 @@
 ## Cambios posteriores a este plan
 
 - **Pestaña Optimizado.** Se simplificó: solo el código optimizado (el original ya está en el editor), en el panel derecho junto a *Tokens*. Los diálogos de abrir/guardar arrancan en la carpeta del archivo actual o en `ejemplos/`.
-- **Validación con el código intermedio (2026-11-03).** `Compilador` genera también el código intermedio del texto optimizado (sin volver a optimizarlo) y `Validacion` compara los valores finales con los del original. `ResultadoOptimizacion` pasa a `(original, optimizado, intermedio, validacion)`. La pestaña *Código intermedio* gana un selector *Original / Optimizado* y `EscritorOptimizacion` también escribe `codigo_intermedio_optimizado.txt`.

@@ -4,11 +4,8 @@ import com.compiladorada.intermedio.Cuadruplo;
 import com.compiladorada.intermedio.FilaIntermedia;
 import com.compiladorada.intermedio.ResultadoIntermedio;
 import com.compiladorada.intermedio.ValorFinal;
-import com.compiladorada.optimizacion.ResultadoOptimizacion;
 
 import javax.swing.DefaultListModel;
-import javax.swing.JComboBox;
-import javax.swing.JLabel;
 import javax.swing.JList;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
@@ -18,7 +15,6 @@ import javax.swing.JTextArea;
 import javax.swing.ListSelectionModel;
 import javax.swing.table.AbstractTableModel;
 import java.awt.BorderLayout;
-import java.awt.FlowLayout;
 import java.awt.Font;
 import java.util.ArrayList;
 import java.util.List;
@@ -28,9 +24,7 @@ import java.util.List;
  * lista de expresiones aritméticas; a la derecha, para la seleccionada, su
  * tabla de cuádruplos {@code # | Operador | Arg 1 | Arg 2 | Resultado} y debajo
  * prefijo, posfijo y resultado. Abajo, los métodos utilizados y los valores
- * finales de las variables. Un selector alterna entre el código intermedio del
- * fuente original y el del optimizado; al pie se muestra si sus valores finales
- * coinciden.
+ * finales de las variables.
  */
 public class PanelIntermedio extends JPanel {
 
@@ -40,12 +34,7 @@ public class PanelIntermedio extends JPanel {
     private final JTable tabla = new JTable(modelo);
     private final JTextArea resumen = new JTextArea(4, 40);
     private final JTextArea detalle = new JTextArea();
-    private final JComboBox<String> selector = new JComboBox<>(new String[] {"Original", "Optimizado"});
     private List<FilaIntermedia> filas = new ArrayList<>();
-    private ResultadoIntermedio original;
-    private ResultadoIntermedio optimizado;
-    private String validacion;
-    private boolean cambiandoSelector;
 
     public PanelIntermedio() {
         super(new BorderLayout());
@@ -70,45 +59,11 @@ public class PanelIntermedio extends JPanel {
         JSplitPane division = new JSplitPane(JSplitPane.VERTICAL_SPLIT, arriba, new JScrollPane(detalle));
         division.setResizeWeight(0.65);
         add(division, BorderLayout.CENTER);
-
-        JPanel barra = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 2));
-        barra.add(new JLabel("Código intermedio de:"));
-        barra.add(selector);
-        add(barra, BorderLayout.NORTH);
-        selector.addActionListener(e -> {
-            if (!cambiandoSelector) {
-                mostrarVista();
-            }
-        });
-        setResultados(null, null);
+        setOmitido();
     }
 
-    /** Solo el intermedio del fuente original (sin versión optimizada con la que compararlo). */
+    /** @param r resultado de la fase, o {@code null} si se omitió por errores previos */
     public void setResultado(ResultadoIntermedio r) {
-        setResultados(r, null);
-    }
-
-    /**
-     * @param original     resultado de la fase sobre el fuente, o {@code null} si se omitió por errores previos
-     * @param optimizacion optimización con el intermedio del texto optimizado y su validación, o {@code null}
-     */
-    public void setResultados(ResultadoIntermedio original, ResultadoOptimizacion optimizacion) {
-        this.original = original;
-        this.optimizado = optimizacion != null ? optimizacion.intermedio() : null;
-        this.validacion = optimizacion != null && optimizacion.validacion() != null
-                ? optimizacion.validacion().texto() : null;
-        cambiandoSelector = true;
-        selector.setSelectedIndex(0);
-        selector.setEnabled(optimizado != null);
-        cambiandoSelector = false;
-        mostrarVista();
-    }
-
-    private void mostrarVista() {
-        cargar(selector.getSelectedIndex() == 1 ? optimizado : original);
-    }
-
-    private void cargar(ResultadoIntermedio r) {
         if (r == null) {
             setOmitido();
             return;
@@ -129,9 +84,6 @@ public class PanelIntermedio extends JPanel {
         for (ValorFinal v : r.valoresFinales()) {
             sb.append("  ").append(v.nombre()).append(" : ").append(v.tipo())
               .append(" = ").append(v.texto()).append('\n');
-        }
-        if (validacion != null) {
-            sb.append('\n').append(validacion).append('\n');
         }
         detalle.setText(sb.toString());
         detalle.setCaretPosition(0);
@@ -168,15 +120,6 @@ public class PanelIntermedio extends JPanel {
     /** Número de expresiones listadas. */
     public int getFilas() {
         return filas.size();
-    }
-
-    /** Vista mostrada: 0 = original, 1 = optimizado. */
-    public void seleccionarVista(int indice) {
-        selector.setSelectedIndex(indice);
-    }
-
-    public boolean isSelectorHabilitado() {
-        return selector.isEnabled();
     }
 
     public String getDetalle() {

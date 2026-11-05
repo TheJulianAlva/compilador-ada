@@ -635,7 +635,7 @@ com.compiladorada                        ← MOTOR (sin dependencias de Swing)
 │                               GeneradorCuadruplos, Evaluador, GeneradorIntermedio → ResultadoIntermedio
 │
 ├── optimizacion/               Optimizador (recorrido del AST con ámbitos), Compactador, Impresor,
-│                               PlegadorConstantes, ReductorPotencia, Validacion → ResultadoOptimizacion
+│                               PlegadorConstantes, ReductorPotencia → ResultadoOptimizacion
 │
 ├── errores/
 │   ├── ErrorCompilacion        record { categoria (LEXICO|SINTACTICO|SEMANTICO), linea, columna, mensaje };
@@ -654,8 +654,8 @@ com.compiladorada.ide                     ← IDE (Swing + RSyntaxTextArea 3.5.4
 ├── BarraEstado                 JPanel sur: "Ln x, Col y" (oeste) + resultado de compilación (este)
 ├── TablaTokensPanel            JTable no editable con AbstractTableModel sobre List<TokenLexico>
 ├── PanelErrores                JTabbedPane: "Léxicos (n)" / "Sintácticos (m)" / "Semánticos (k)", doble clic → irA(linea,col)
-├── PanelIntermedio             selector Original/Optimizado; lista de expresiones, cuádruplos, prefijo, posfijo,
-│                               valores finales y la validación
+├── PanelIntermedio             lista de expresiones y, de la seleccionada, cuádruplos, prefijo, posfijo y valor;
+│                               valores finales de las variables
 └── PanelOptimizado             RSyntaxTextArea de solo lectura con el código optimizado
 ```
 
@@ -668,8 +668,7 @@ com.compiladorada.ide                     ← IDE (Swing + RSyntaxTextArea 3.5.4
   Ejecuta el recorrido léxico dedicado y el parseo (el análisis semántico va
   embebido en el parseo), captura **cualquier** `Throwable` del parser (incluido
   el corte por tope de 200) y, si el programa no tiene errores, genera el código
-  intermedio, optimiza el fuente y genera también el código intermedio del
-  texto optimizado para validarlo contra el del original. Devuelve siempre un
+  intermedio del fuente y optimiza el fuente. Devuelve siempre un
   `ResultadoCompilacion` con lo acumulado. **Nunca lanza** por errores del
   programa analizado.
 - **`ResultadoCompilacion`** — record inmutable con las siete salidas (tokens,
@@ -700,8 +699,7 @@ com.compiladorada.ide                     ← IDE (Swing + RSyntaxTextArea 3.5.4
   evaluado con una memoria de variables. Ver
   `docs/superpowers/specs/2026-10-13-codigo-intermedio-design.md`.
 - **`Optimizador` y su paquete** — compacta el fuente, pliega constantes y
-  reduce potencia sobre todo el programa; `Validacion` compara los valores
-  finales del intermedio del original y del optimizado. Ver
+  reduce potencia sobre todo el programa y devuelve el fuente optimizado. Ver
   `docs/superpowers/specs/2026-10-28-optimizacion-design.md`.
 - **`TraductorMensajes`** — aislado del parser generado; convierte
   `ParseException` a español.
@@ -743,7 +741,7 @@ Flujo de datos, un solo sentido:
 `EditorPanel.getTexto()` → `VentanaPrincipal.compilar()` →
 `Compilador.analizar(...)` → `ResultadoCompilacion` →
 `TablaTokensPanel.setTokens()` + `PanelErrores.setErrores()` +
-`PanelIntermedio.setResultados()` + `PanelOptimizado.setResultado()` +
+`PanelIntermedio.setResultado()` + `PanelOptimizado.setResultado()` +
 `EscritorErrores` / `EscritorIntermedio` / `EscritorOptimizacion` +
 `BarraEstado.setResultado()`.
 
@@ -769,8 +767,8 @@ anidados y una barra de estado al sur:
 ├────────────────────────────────┴─────────────────────────────────┤
 │ [ Errores | Código intermedio ]                                   │
 │ Errores:  [ Léxicos (n) | Sintácticos (m) | Semánticos (k) ]      │
-│ Intermedio: selector Original/Optimizado, expresiones, cuádruplos,│
-│             prefijo, posfijo, valores finales y validación        │
+│ Intermedio: expresiones, cuádruplos, prefijo, posfijo, valor y    │
+│             valores finales de las variables                      │
 ├──────────────────────────────────────────────────────────────────┤
 │ Ln 12, Col 8                  Compilado: 0 léxicos, ...           │ BarraEstado
 └──────────────────────────────────────────────────────────────────┘
@@ -811,15 +809,15 @@ el IDE si no existe), igual en Linux y Windows.
 3. `tablaTokens.setTokens(r.tokens())`,
    `panelErrores.setErrores(...)` (léxicos, sintácticos y semánticos, con el
    aviso de fase omitida; actualiza los contadores de las pestañas),
-   `panelIntermedio.setResultados(r.intermedio(), r.optimizacion())` y
+   `panelIntermedio.setResultado(r.intermedio())` y
    `panelOptimizado.setResultado(r.optimizacion())`.
 4. Crea `output/` si no existe. Si el editor no tiene ruta, escribe el texto en
    `output/fuente_sin_guardar.ada`.
 5. Vuelca a `output/`: `EscritorErrores.volcar` (`tokens.txt`,
    `errores_lexicos.txt`, `errores_sintacticos.txt`),
    `EscritorIntermedio.volcar` (`codigo_intermedio.txt`) y
-   `EscritorOptimizacion.volcar` (`codigo_optimizado.ada` y
-   `codigo_intermedio_optimizado.txt`); todos se sobrescriben por completo.
+   `EscritorOptimizacion.volcar` (`codigo_optimizado.ada`, el fuente
+   optimizado); todos se sobrescriben por completo.
 6. `barraEstado.setResultado("Compilado: n léxicos, m sintácticos, k semánticos —
    <ruta absoluta de output/> actualizado")`, o el aviso de la fase que se omitió,
    más una nota si se guardó la fuente sin guardar.
@@ -840,8 +838,7 @@ con `setDirectorioSalida`). Se **sobrescriben completos** en cada compilación.
 | `errores_lexicos.txt` | cabecera (`== ERRORES LÉXICOS ==`, fecha ISO, total) + una línea por error, o `Sin errores.` |
 | `errores_sintacticos.txt` | ídem con `== ERRORES SINTÁCTICOS ==` |
 | `codigo_intermedio.txt` | reporte del código intermedio del fuente original: por expresión, cuádruplos, prefijo, posfijo y valor; métodos usados y valores finales (o `Generación OMITIDA` si hay errores) |
-| `codigo_optimizado.ada` | el fuente optimizado (o `Optimización OMITIDA` si hay errores) |
-| `codigo_intermedio_optimizado.txt` | el mismo reporte sobre el código optimizado, terminado con la línea de validación contra el original |
+| `codigo_optimizado.ada` | el fuente optimizado, reescrito en cada compilación (o `Optimización OMITIDA` si hay errores) |
 | `fuente_sin_guardar.ada` | solo si el editor no tiene archivo: copia del texto compilado |
 
 Formato de cada línea de error (estilo GCC/GNAT), producido por
@@ -871,7 +868,7 @@ mi_programa.ada:3:1: error sintáctico: se esperaba ':=' o ';' pero se encontró
 
 > **[Captura pendiente: panel de errores con múltiples errores léxicos y sintácticos]** — `docs/img/03-panel-errores.png`
 
-> **[Captura pendiente: pestaña Código intermedio con el selector Original/Optimizado y la validación]** — `docs/img/04-codigo-intermedio.png`
+> **[Captura pendiente: pestaña Código intermedio con la lista de expresiones y la tabla de cuádruplos]** — `docs/img/04-codigo-intermedio.png`
 
 > **[Captura pendiente: pestaña Optimizado junto al editor]** — `docs/img/05-optimizado.png`
 
@@ -928,7 +925,7 @@ corre y su `errores_sintacticos.txt` dice `OMITIDO`).
 
 ### 8.2 Conteo total de tests
 
-`mvn -q test` → **271 tests, 0 fallos, 0 errores** (agregado de
+`mvn -q test` → **268 tests, 0 fallos, 0 errores** (agregado de
 `target/surefire-reports/`, a 2026-11-03). Desglose por clase:
 
 | Clase de test | Tests | Cubre |
@@ -941,7 +938,7 @@ corre y su `errores_sintacticos.txt` dice `OMITIDO`).
 | `com.compiladorada.ide.AdaTokenMakerTest` | 6 | resaltado: palabras reservadas, comentarios, cadenas, números |
 | `com.compiladorada.ide.EditorPanelTest` | 6 | nuevo/abrir/guardar, flag modificado |
 | `com.compiladorada.ide.PanelesTest` | 11 | `TablaTokensPanel`, `PanelErrores`, `BarraEstado`, paneles intermedio y optimizado |
-| `com.compiladorada.ide.VentanaPrincipalTest` | 11 | flujo `compilar()`, `output/`, pestañas, selector, carpeta inicial |
+| `com.compiladorada.ide.VentanaPrincipalTest` | 11 | flujo `compilar()`, `output/`, pestañas, carpeta inicial |
 | `com.compiladorada.intermedio.EvaluadorTest` | 5 | evaluación con Integer de 32 bits y Float, errores de ejecución |
 | `com.compiladorada.intermedio.GeneradorIntermedioTest` | 12 | cuádruplos, memoria de variables, filas por expresión |
 | `com.compiladorada.intermedio.NotacionesTest` | 7 | prefijo y posfijo |
@@ -953,7 +950,6 @@ corre y su `errores_sintacticos.txt` dice `OMITIDO`).
 | `com.compiladorada.optimizacion.ImpresorTest` | 5 | paréntesis mínimos y reanálisis al mismo árbol (propiedad aleatoria) |
 | `com.compiladorada.optimizacion.OptimizadorTest` | 15 | optimización de programas, ámbitos, y propiedades sobre `ejemplos/` |
 | `com.compiladorada.optimizacion.TransformacionesTest` | 4 | plegado de constantes y reducción de potencia |
-| `com.compiladorada.optimizacion.ValidacionTest` | 3 | comparación de valores finales original/optimizado |
 | `com.compiladorada.semantico.AmbitoTest` | 6 | ámbitos anidados y búsqueda de símbolos |
 | `com.compiladorada.semantico.CasosSemanticosTest` | 16 | batería `casos/semanticos` (válidos e inválidos) |
 | `com.compiladorada.semantico.MensajesSemanticosTest` | 1 | mensajes semánticos en español |
@@ -969,7 +965,7 @@ corre y su `errores_sintacticos.txt` dice `OMITIDO`).
 | `com.compiladorada.sintactico.GramaticaTiposTest` | 7 | `type`, `subtype`, `record`, `array`, enumerados |
 | `com.compiladorada.sintactico.ImplementacionAEmbebidaTest` | 5 | análisis semántico con acciones embebidas (Implementación A) |
 | `com.compiladorada.sintactico.RecuperacionSintacticaTest` | 7 | modo pánico, errores fantasma, múltiples errores, basura final |
-| **Total** | **271** | |
+| **Total** | **268** | |
 
 El IDE se prueba construyendo componentes Swing reales (no *mock*); la suite
 **no** es portable a un CI *headless* sin un servidor X virtual (ver sección 9).
@@ -1037,8 +1033,9 @@ el mismo front-end. Así quedó:
   Prefijo, posfijo, cuádruplos y evaluación sobre el AST, sin volver a analizar
   el texto. Ver `docs/superpowers/specs/2026-10-13-codigo-intermedio-design.md`.
 - **Optimización (Unidad 3) — hecha.** Sobre el mismo fuente: compactación,
-  plegado de constantes y reducción de potencia; el código intermedio de ambas
-  versiones se genera para validar que dan los mismos resultados. Ver
+  plegado de constantes y reducción de potencia; el resultado es el fuente
+  optimizado, que se muestra en la pestaña *Optimizado* y se guarda en
+  `output/codigo_optimizado.ada`. Ver
   `docs/superpowers/specs/2026-10-28-optimizacion-design.md`.
 - **Código objeto (Unidad 4) — pendiente.** Generación de NASM y empaquetado
   con Launch4j.

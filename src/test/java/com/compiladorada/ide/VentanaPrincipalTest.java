@@ -131,44 +131,32 @@ class VentanaPrincipalTest {
     }
 
     @Test
-    void el_selector_muestra_el_intermedio_del_optimizado_y_la_validacion(@TempDir Path dir) throws Exception {
+    void compilar_dos_veces_sobrescribe_el_archivo_del_fuente_optimizado(@TempDir Path dir) throws Exception {
         VentanaPrincipal v = new VentanaPrincipal();
         v.setDirectorioSalida(dir);
-        v.getEditor().setTexto("procedure P is A : Integer := 3; B : Integer; begin B := A * 2 + 1; end P;");
+        v.getEditor().setTexto("procedure P is A : Integer := 2; B : Integer; begin B := A * 2; end P;");
+        v.compilar();
+        assertTrue(Files.readString(dir.resolve("codigo_optimizado.ada")).contains("B:=A+A;"));
 
+        v.getEditor().setTexto("procedure Q is X : Integer := 2 ** 3; begin null; end Q;");
         v.compilar();
 
-        var panel = v.getPanelIntermedio();
-        assertTrue(panel.isSelectorHabilitado());
-        assertEquals("+ * A 2 1", prefijoMostrado(panel));
-        assertTrue(panel.getDetalle().contains("coinciden"), panel.getDetalle());
-
-        panel.seleccionarVista(1);
-
-        assertEquals("+ + A A 1", prefijoMostrado(panel));
-        assertTrue(panel.getResumen().contains("Resultado: 7"), panel.getResumen());
-        assertTrue(panel.getDetalle().contains("B : Integer = 7"), panel.getDetalle());
-        assertTrue(panel.getDetalle().contains("coinciden"), panel.getDetalle());
-        String txt = Files.readString(dir.resolve("codigo_intermedio_optimizado.txt"));
-        assertTrue(txt.contains("+ + A A 1"), txt);
-        assertTrue(txt.contains("Validación: los valores finales"), txt);
-    }
-
-    private static String prefijoMostrado(PanelIntermedio panel) {
-        String resumen = panel.getResumen();
-        return resumen.lines().filter(l -> l.startsWith("Prefijo")).findFirst().orElseThrow()
-                .replaceFirst("Prefijo\\s*:\\s*", "");
+        String archivo = Files.readString(dir.resolve("codigo_optimizado.ada"));
+        assertTrue(archivo.contains("procedure Q is"), archivo);
+        assertTrue(archivo.contains("X:Integer:=8;"), archivo);
+        assertFalse(archivo.contains("B:=A+A;"), archivo);
     }
 
     @Test
-    void con_errores_el_selector_se_deshabilita_y_el_archivo_lo_indica(@TempDir Path dir) throws Exception {
+    void compilar_sin_guardar_escribe_el_archivo_del_fuente_optimizado(@TempDir Path dir) throws Exception {
         VentanaPrincipal v = new VentanaPrincipal();
         v.setDirectorioSalida(dir);
-        v.getEditor().setTexto("procedure P is X : Integer begin null; end;");
+        v.getEditor().nuevo();
+        v.getEditor().setTexto("procedure P is  -- c\nbegin\n   null;\nend P;");
 
         v.compilar();
 
-        assertFalse(v.getPanelIntermedio().isSelectorHabilitado());
-        assertTrue(Files.readString(dir.resolve("codigo_intermedio_optimizado.txt")).startsWith("Generación OMITIDA"));
+        assertEquals("procedure P is\nbegin\nnull;\nend P;\n",
+                Files.readString(dir.resolve("codigo_optimizado.ada")));
     }
 }
