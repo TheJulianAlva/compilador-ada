@@ -50,6 +50,7 @@ public class VentanaPrincipal extends JFrame {
         setDefaultCloseOperation(EXIT_ON_CLOSE);
         setSize(1100, 750);
         setLocationRelativeTo(null);
+        setIconImages(cargarIconos());
         setExtendedState(MAXIMIZED_BOTH);
         setJMenuBar(construirMenu());
 
@@ -67,6 +68,18 @@ public class VentanaPrincipal extends JFrame {
 
         editor.addCaretListener(actualizarPosicion());
         panelErrores.setOnSeleccion(this::irA);
+    }
+
+    /** Íconos de la aplicación (varios tamaños) desde los recursos del JAR. */
+    private static java.util.List<java.awt.Image> cargarIconos() {
+        java.util.List<java.awt.Image> iconos = new java.util.ArrayList<>();
+        for (int tam : new int[] {16, 32, 48, 64, 128, 256}) {
+            var url = VentanaPrincipal.class.getResource("/icono/icono-" + tam + ".png");
+            if (url != null) {
+                iconos.add(new javax.swing.ImageIcon(url).getImage());
+            }
+        }
+        return iconos;
     }
 
     private CaretListener actualizarPosicion() {

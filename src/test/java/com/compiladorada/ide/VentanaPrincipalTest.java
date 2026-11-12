@@ -54,6 +54,13 @@ class VentanaPrincipalTest {
     }
 
     @Test
+    void la_ventana_tiene_icono_y_inicia_maximizada() {
+        VentanaPrincipal v = new VentanaPrincipal();
+        assertEquals(6, v.getIconImages().size());
+        assertTrue((v.getExtendedState() & java.awt.Frame.MAXIMIZED_BOTH) == java.awt.Frame.MAXIMIZED_BOTH);
+    }
+
+    @Test
     void el_menu_tiene_las_secciones_requeridas() {
         VentanaPrincipal v = new VentanaPrincipal();
         java.util.List<String> menus = new java.util.ArrayList<>();
