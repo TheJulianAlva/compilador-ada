@@ -38,6 +38,13 @@ programa: **plegado de constantes** (`2 ** 5 + 3` → `35`) y **reducción de
 potencia** (`X ** 2` → `X * X`, `X * 2` → `X + X`, `X / 2.0` → `X * 0.5`).
 Ejemplo: `ejemplos/optimizacion.ada`.
 
+**Interfaz y archivos.** El IDE usa FlatLaf con tema claro/oscuro (menú
+**Ver → Tema**, se recuerda la elección). **Archivo → Abrir…** arranca en la
+carpeta Documentos del usuario y **Archivo → Abrir ejemplos…** en la carpeta
+`ejemplos/` (se busca junto al ejecutable/instalación, o en la propiedad
+`-Dcompilador.home=<carpeta>`). Al empaquetar para Windows basta copiar
+`ejemplos/` junto al programa.
+
 La siguiente unidad (código objeto) se construye sobre el mismo AST y tabla de
 símbolos.
 

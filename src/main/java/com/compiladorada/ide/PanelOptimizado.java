@@ -29,6 +29,7 @@ public class PanelOptimizado extends JPanel {
                 org.fife.ui.rsyntaxtextarea.TokenMakerFactory.getDefaultInstance())
                 .putMapping("text/ada", "com.compiladorada.ide.AdaTokenMaker");
         area.setSyntaxEditingStyle("text/ada");
+        GestorTema.estilizar(area);
         RTextScrollPane scroll = new RTextScrollPane(area);
         scroll.setLineNumbersEnabled(true);
         add(scroll, BorderLayout.CENTER);

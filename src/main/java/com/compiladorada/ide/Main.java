@@ -15,6 +15,9 @@ public final class Main {
     }
 
     public static void main(String[] args) {
-        SwingUtilities.invokeLater(() -> new VentanaPrincipal().setVisible(true));
+        SwingUtilities.invokeLater(() -> {
+            GestorTema.iniciar();
+            new VentanaPrincipal().setVisible(true);
+        });
     }
 }

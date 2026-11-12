@@ -787,17 +787,19 @@ anidados y una barra de estado al sur:
 
 | Menú | Ítems |
 |---|---|
-| **Archivo** | Nuevo · Abrir… · Guardar · Guardar como… · —— · Salir |
+| **Archivo** | Nuevo · Abrir… · Abrir ejemplos… · Guardar · Guardar como… · —— · Salir |
 | **Editar** | Deshacer · Rehacer · —— · Cortar · Copiar · Pegar |
 | **Compilar** | Compilar (**F5**) · —— · Abrir carpeta `output/` |
-| **Ver** | Mostrar/ocultar tabla de tokens y optimizado · Mostrar/ocultar panel de errores y código intermedio |
+| **Ver** | Mostrar/ocultar tabla de tokens y optimizado · Mostrar/ocultar panel de errores y código intermedio · Tema (Claro/Oscuro) |
 | **Ayuda** | Acerca de… |
 
 No hay `JToolBar`. "Compilar" lleva acelerador `F5`
 (`KeyStroke.getKeyStroke(KeyEvent.VK_F5, 0)`) activo sin abrir el menú. Abrir y
-Guardar como usan `JFileChooser`, que arranca en la carpeta del archivo abierto
-o, si no hay, en `ejemplos/` del proyecto (o en la carpeta desde donde se ejecuta
-el IDE si no existe), igual en Linux y Windows.
+Guardar como usan `JFileChooser`. Abrir arranca en la carpeta Documentos del
+usuario (`Rutas.carpetaDocumentos()`); Abrir ejemplos, en `ejemplos/`
+(`Rutas.carpetaEjemplos()`, junto al ejecutable); Guardar como, en la carpeta
+del archivo abierto o en Documentos. El aspecto lo da FlatLaf
+(`GestorTema`), con tema claro/oscuro persistido en `Preferences`.
 
 ### 7.3 Flujo "Compilar" (menú Compilar o F5)
 

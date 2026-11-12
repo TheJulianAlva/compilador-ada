@@ -40,6 +40,7 @@ public class EditorPanel extends JPanel {
                         org.fife.ui.rsyntaxtextarea.TokenMakerFactory.getDefaultInstance();
         atmf.putMapping("text/ada", "com.compiladorada.ide.AdaTokenMaker");
         area.setSyntaxEditingStyle("text/ada");
+        GestorTema.estilizar(area);
         RTextScrollPane scroll = new RTextScrollPane(area);
         scroll.setLineNumbersEnabled(true);
         scroll.setBorder(BorderFactory.createEmptyBorder());

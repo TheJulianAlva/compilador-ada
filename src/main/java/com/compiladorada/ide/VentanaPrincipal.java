@@ -50,6 +50,7 @@ public class VentanaPrincipal extends JFrame {
         setDefaultCloseOperation(EXIT_ON_CLOSE);
         setSize(1100, 750);
         setLocationRelativeTo(null);
+        setExtendedState(MAXIMIZED_BOTH);
         setJMenuBar(construirMenu());
 
         panelDerecho.addTab("Tokens", tablaTokens);
@@ -88,6 +89,7 @@ public class VentanaPrincipal extends JFrame {
         JMenu archivo = new JMenu("Archivo");
         archivo.add(item("Nuevo", e -> editor.nuevo()));
         archivo.add(item("Abrir…", e -> accionAbrir()));
+        archivo.add(item("Abrir ejemplos…", e -> accionAbrirEjemplos()));
         archivo.add(item("Guardar", e -> accionGuardar()));
         archivo.add(item("Guardar como…", e -> accionGuardarComo()));
         archivo.addSeparator();
@@ -116,11 +118,23 @@ public class VentanaPrincipal extends JFrame {
         ver.add(item("Mostrar/ocultar tabla de tokens y optimizado", e -> panelDerecho.setVisible(!panelDerecho.isVisible())));
         ver.add(item("Mostrar/ocultar panel de errores y código intermedio",
                 e -> panelInferior.setVisible(!panelInferior.isVisible())));
+        ver.addSeparator();
+        JMenu tema = new JMenu("Tema");
+        javax.swing.ButtonGroup grupo = new javax.swing.ButtonGroup();
+        for (GestorTema.Tema t : GestorTema.Tema.values()) {
+            javax.swing.JRadioButtonMenuItem rb = new javax.swing.JRadioButtonMenuItem(
+                    t == GestorTema.Tema.CLARO ? "Claro" : "Oscuro", t == GestorTema.getActual());
+            rb.addActionListener(e -> GestorTema.aplicar(t));
+            grupo.add(rb);
+            tema.add(rb);
+        }
+        ver.add(tema);
         barra.add(ver);
 
         JMenu ayuda = new JMenu("Ayuda");
         ayuda.add(item("Acerca de…", e -> JOptionPane.showMessageDialog(this,
-                "Compilador Ada — IDE\nLenguajes y Autómatas II")));
+                "Compilador Ada — IDE\nLenguajes y Autómatas II\n\nEquipo 1\n"
+                        + "Construido por:\n< Julián Alva >\n< Mariana Becerril >\n< Ximena Pérez >")));
         barra.add(ayuda);
 
         return barra;
@@ -192,21 +206,38 @@ public class VentanaPrincipal extends JFrame {
     }
 
     /**
-     * Carpeta donde abren los diálogos de archivo: la del archivo actual si
-     * hay uno, si no {@code ejemplos/} del proyecto y, en su defecto, la
-     * carpeta desde donde se ejecuta el IDE. Funciona igual en Linux y Windows.
+     * Carpeta donde abre "Guardar como…": la del archivo actual si hay uno y,
+     * si no, la carpeta Documentos del usuario.
      */
     java.io.File carpetaInicial() {
         var actual = editor.getRutaArchivo();
         if (actual.isPresent() && actual.get().toAbsolutePath().getParent() != null) {
             return actual.get().toAbsolutePath().getParent().toFile();
         }
-        Path ejemplos = Path.of("ejemplos").toAbsolutePath();
-        return Files.isDirectory(ejemplos) ? ejemplos.toFile() : Path.of("").toAbsolutePath().toFile();
+        return Rutas.carpetaDocumentos().toFile();
     }
 
+    /** "Abrir…" arranca siempre en la carpeta Documentos del usuario. */
     private void accionAbrir() {
-        javax.swing.JFileChooser fc = new javax.swing.JFileChooser(carpetaInicial());
+        elegirYAbrir(Rutas.carpetaDocumentos().toFile(), false);
+    }
+
+    /** "Abrir ejemplos…" arranca en la carpeta de ejemplos que viaja con el programa. */
+    private void accionAbrirEjemplos() {
+        var ejemplos = Rutas.carpetaEjemplos();
+        if (ejemplos.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "No se encontró la carpeta de ejemplos.",
+                    "Abrir ejemplos", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+        elegirYAbrir(ejemplos.get().toFile(), true);
+    }
+
+    private void elegirYAbrir(java.io.File carpeta, boolean soloAda) {
+        javax.swing.JFileChooser fc = new javax.swing.JFileChooser(carpeta);
+        if (soloAda) {
+            fc.setFileFilter(new javax.swing.filechooser.FileNameExtensionFilter("Archivos Ada (*.ada)", "ada"));
+        }
         if (fc.showOpenDialog(this) == javax.swing.JFileChooser.APPROVE_OPTION) {
             editor.abrir(fc.getSelectedFile().toPath());
         }

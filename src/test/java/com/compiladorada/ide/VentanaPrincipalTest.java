@@ -61,6 +61,19 @@ class VentanaPrincipalTest {
             menus.add(v.getJMenuBar().getMenu(i).getText());
         }
         assertEquals(java.util.List.of("Archivo", "Editar", "Compilar", "Ver", "Ayuda"), menus);
+
+        var archivo = v.getJMenuBar().getMenu(0);
+        java.util.List<String> items = new java.util.ArrayList<>();
+        for (int i = 0; i < archivo.getItemCount(); i++) {
+            if (archivo.getItem(i) != null) items.add(archivo.getItem(i).getText());
+        }
+        assertTrue(items.contains("Abrir ejemplos…"));
+        var ver = v.getJMenuBar().getMenu(3);
+        boolean hayTema = false;
+        for (int i = 0; i < ver.getItemCount(); i++) {
+            if (ver.getItem(i) != null && "Tema".equals(ver.getItem(i).getText())) hayTema = true;
+        }
+        assertTrue(hayTema);
     }
 
     @Test
@@ -120,9 +133,9 @@ class VentanaPrincipalTest {
     }
 
     @Test
-    void los_dialogos_de_archivo_abren_en_la_carpeta_del_archivo_actual_o_en_ejemplos(@TempDir Path dir) throws Exception {
+    void guardar_como_abre_en_la_carpeta_del_archivo_actual_o_en_documentos(@TempDir Path dir) throws Exception {
         VentanaPrincipal v = new VentanaPrincipal();
-        assertEquals(Path.of("ejemplos").toAbsolutePath().toFile(), v.carpetaInicial());
+        assertEquals(Rutas.carpetaDocumentos().toFile(), v.carpetaInicial());
 
         Path archivo = dir.resolve("a.ada");
         Files.writeString(archivo, "procedure P is begin null; end P;");
