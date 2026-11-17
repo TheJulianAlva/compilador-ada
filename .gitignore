@@ -33,6 +33,7 @@ nbactions.xml
 *.asm.out
 a.out
 output/
+dist/
 
 # --- SO ---
 .DS_Store

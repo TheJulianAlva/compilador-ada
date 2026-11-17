@@ -15,6 +15,7 @@ public final class Main {
     }
 
     public static void main(String[] args) {
+        Rutas.prepararCarpetaTrabajo();
         SwingUtilities.invokeLater(() -> {
             GestorTema.iniciar();
             new VentanaPrincipal().setVisible(true);

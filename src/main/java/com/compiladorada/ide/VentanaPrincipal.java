@@ -43,7 +43,7 @@ public class VentanaPrincipal extends JFrame {
     private final JTabbedPane panelInferior = new JTabbedPane();
     private final JTabbedPane panelDerecho = new JTabbedPane();
     private final BarraEstado barraEstado = new BarraEstado();
-    private Path directorioSalida = Path.of("output");
+    private Path directorioSalida = Rutas.carpetaSalida();
 
     public VentanaPrincipal() {
         super("Compilador Ada — IDE");
@@ -237,7 +237,7 @@ public class VentanaPrincipal extends JFrame {
 
     /** "Abrir ejemplos…" arranca en la carpeta de ejemplos que viaja con el programa. */
     private void accionAbrirEjemplos() {
-        var ejemplos = Rutas.carpetaEjemplos();
+        var ejemplos = Rutas.ejemplosParaAbrir();
         if (ejemplos.isEmpty()) {
             JOptionPane.showMessageDialog(this, "No se encontró la carpeta de ejemplos.",
                     "Abrir ejemplos", JOptionPane.WARNING_MESSAGE);
