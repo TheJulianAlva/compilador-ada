@@ -26,8 +26,11 @@ asignación o un argumento de llamada) del procedimiento principal se muestran
 los **cuádruplos** paso a paso (`# | Operador | Arg 1 | Arg 2 | Resultado`), la
 notación **prefija** (preorden), la **posfija** (postorden) y el **valor** evaluado con una memoria de variables (Integer de 32 bits, Float).
 Solo corre si no hay errores previos; el contenido de `if`/`while`/`for` se
-ignora. El reporte también se guarda en `output/codigo_intermedio.txt` (menú **Compilar → Abrir carpeta output/** la abre en el explorador de archivos). Ejemplo:
-`ejemplos/codigo_intermedio.ada`.
+ignora. El reporte también se guarda en `output/codigo_intermedio.txt` (menú **Compilar → Abrir carpeta output/** la abre en el explorador de archivos). Ejemplos:
+`ejemplos/nomina_completo.ada` (sin errores) y
+`ejemplos/nomina_errores.ada` (el mismo programa con 1 error léxico,
+2 sintácticos, 5 semánticos y 4 de código intermedio, que se ven por etapas
+comentando las líneas marcadas).
 
 Con un programa sin errores, la pestaña **Optimizado** (en el panel derecho,
 junto a la tabla de tokens) muestra el fuente optimizado, frente al original del
@@ -36,14 +39,15 @@ optimización quita comentarios, líneas en blanco, indentación y espacios
 innecesarios, y aplica dos técnicas sobre expresiones aritméticas de todo el
 programa: **plegado de constantes** (`2 ** 5 + 3` → `35`) y **reducción de
 potencia** (`X ** 2` → `X * X`, `X * 2` → `X + X`, `X / 2.0` → `X * 0.5`).
-Ejemplo: `ejemplos/optimizacion.ada`.
+Ejemplo: `ejemplos/nomina_completo.ada`.
 
 **Interfaz y archivos.** El IDE usa FlatLaf con tema claro/oscuro (menú
 **Ver → Tema**, se recuerda la elección). **Archivo → Abrir…** arranca en la
 carpeta Documentos del usuario y **Archivo → Abrir ejemplos…** en la carpeta
-`ejemplos/` (se busca junto al ejecutable/instalación, o en la propiedad
-`-Dcompilador.home=<carpeta>`). Al empaquetar para Windows basta copiar
-`ejemplos/` junto al programa.
+`ejemplos/` de la carpeta de trabajo. La carpeta de trabajo (por defecto
+`Documentos\CompiladorAda`, elegible en el instalador y guardada en
+`%APPDATA%\CompiladorAda\config.properties`) contiene `output/`, `ejemplos/` y
+`proyectos/`.
 
 La siguiente unidad (código objeto) se construye sobre el mismo AST y tabla de
 símbolos.
